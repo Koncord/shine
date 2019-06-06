@@ -1,0 +1,23 @@
+extern printf(format: *i8, ...) : void;
+
+def main(argc : i32, argv : *i8): i32
+
+    let i: i64 = -5;
+
+    repeat                  # hipster style of do-while
+        printf("%d\n", i);
+        i += 1;
+    while i < 0;
+
+    for let i: i64 = 5; i != 0; --i;
+        printf("%d\n", i);
+    end
+
+    i = 5;
+    while i
+         printf("%d\n", i)
+         --i;
+    end
+    return 0;
+end
+

@@ -1,0 +1,159 @@
+program = statement;
+block = {statement} "end";
+
+
+type_expression = "void"
+                | ("i" | "u") , ("8" | "16" | "32" | "64")
+                | "bool"
+                | "float"
+                | "string"
+                | user_type ;
+
+user_type = identifier ;
+
+statement = selection_statement
+          | iteration_statement
+          | jump_statement
+          | declaration_statement
+          | function_statement
+          | struct_statement
+          | use_statement
+          | expression ;
+
+
+selection_statement = ("if" | "unless") expression block
+                    | "if" expression statement "else" block
+                    | case_statement ;
+
+case_statement = "case" expression
+               { "when" expression {"," expression } statement }
+               [ "else" block ";" ] ;
+
+iteration_statement = "while" expression block
+                    | "repeat" {statement} ("while" | "unless") expression ";"
+                    | "for" variable_expression ";" expression ";" expression ";" block;
+
+
+jump_statement = "return" ";"
+               | "return" expression ";"
+               | "break" ";"
+               | "continue" ";" ;
+
+parameter_list = "(" [ declaration_expression [ "=" expression ] { "," declaration_expression [ "=" expression ] } ] ")" ;
+
+declaration = identifier parameter_list [":" type_expression] ;
+
+declaration_statement = "extern" declaration ";" ;
+
+function_statement = "def" declaration block ;
+
+struct_statement = "struct" {declaration_expression} "end" ;
+
+use_statement = "use" string ['as' id] ;
+
+expression = not_expression ;
+
+not_expression = "!" not_expression
+               | assignment_expression ;
+
+assignment_expression =  logical_or_expression
+                      | variable_expression
+                      | call_expression "=" not_expression
+                      | call_expression "+=" not_expression
+                      | call_expression "-=" not_expression
+                      | call_expression "/=" not_expression
+                      | call_expression "*=" not_expression
+                      | call_expression "|=" not_expression
+                      | call_expression "&=" not_expression ;
+
+
+logical_or_expression = logical_and_expression { "||" logical_and_expression } ;
+logical_and_expression = bitswise_or_expression { "&&" bitswise_or_expression } ;
+
+bitswise_or_expression = bitswise_xor_expression { "|" bitswise_xor_expression } ;
+bitswise_xor_expression = bitwise_and_expression { "^" bitwise_and_expression } ;
+bitwise_and_expression = equality_expression { "&" equality_exprssion } ;
+
+equality_expression = relational_expression { ( "==" | "!=" ) relational_expression } ;
+relational_expression = shift_expression  { ( "<" | "<=" | ">" | ">=" ) shift_expression } ;
+
+shift_expression =  additive_expression { ( "<<" | ">>" ) additive_expression } ;
+additive_expression = multiplicative_expression { ( "+" | "-" ) multiplicative_expression } ;
+multiplicative_expression = unary_expression { ( "*" | "/" | "%" ) unary_expression } ;
+
+unary_expression = "++" unary_expression
+                 | "--" unary_expression
+                 | "~" unary_expression
+                 | "+" unary_expression
+                 | "-" unary_expression
+                 | "!" unary_expression
+                 | postfix_expression ;
+
+postfix_expression = call_expression
+                   | call_expression "++"
+                   | call_expression "--" ;
+
+
+call_args = expression { "," expression } ;
+call_expression = slot_access_expression "(" [ call_args ] ")"
+                | slot_access_expression ;
+
+slot_access_expression = primary_expression
+                       | primary_expression "[" expression "]"
+                       | primary_expression "." identifier
+                       | primary_expression "." call_expression ;
+
+
+primary_expression = identifier
+                   | integer
+                   | float
+                   | string
+                   | "'" string_char "'"
+                   | array_expression
+                   | hash_expression
+                   | paren_expression ;
+
+variable_expression = let_expression
+                    | const_expression ;
+
+let_expression = "let" declaration ";" ;
+
+const_expression = "const" declaration ";" ;
+
+declaration_expression = identifier {"id", identifier} ":" type_expression ;
+
+
+array_arg_list = expression [ "," ]
+               | expression "," array_arg_list ;
+
+array_expression = "[" [ array_arg_list ] "]" ;
+
+
+hash_pairs = identifier ":" expression
+           | identifier ":" expression "," hash_pairs ;
+
+hash_expression = "{" [ hash_pairs ] "]" ;
+
+paren_expression = "(" expression ")" ;
+
+
+
+
+
+letter = "A" | "B" | "C" | "D" | "E" | "F" | "G"
+       | "H" | "I" | "J" | "K" | "L" | "M" | "N"
+       | "O" | "P" | "Q" | "R" | "S" | "T" | "U"
+       | "V" | "W" | "X" | "Y" | "Z" | "a" | "b"
+       | "c" | "d" | "e" | "f" | "g" | "h" | "i"
+       | "j" | "k" | "l" | "m" | "n" | "o" | "p"
+       | "q" | "r" | "s" | "t" | "u" | "v" | "w"
+       | "x" | "y" | "z" ;
+digit = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
+
+string_char = ? any character ? ;
+string = '"' , { string_char - '"' }, '"' ;
+
+integer = [ "0x" ] , digit , { digit } ;
+float = [ digit , { digit } ] "." digit , { digit } ;
+
+identifier = { "_" | letter } , { letter | digit | "_" } ;

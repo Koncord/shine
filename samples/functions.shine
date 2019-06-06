@@ -1,0 +1,21 @@
+extern printf(format: *i8, ...) : void;
+
+extern myFn(i : i64): void; # forward declaration
+
+def main(argc : i32, argv : *i8): i32
+    myFn(1);
+    myFn(0);
+    return 0;
+end
+
+def myFn(i : i64): void
+    let s: string;
+    if i > 0
+        s = "Hello %d\n";
+    else
+        s = "Bye %d\n";
+    end
+    printf(s, i);
+    #return;                # void functions does not require return statement
+end
+

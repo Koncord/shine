@@ -1,0 +1,30 @@
+extern printf(format: *i8, ...) : void;
+
+def main(argc : i32, argv : *i8): i32
+
+    const a: float = 2;
+    let b: float = a / 5;
+
+    unless b == 0.4                 # if not 0.4
+        printf("Never Called\n");
+    else
+        printf("%f\n", b);
+    end
+
+    if b == 0.4
+        printf("%f\n", b);
+    else
+        printf("Never Called\n");
+    end
+
+    const i: i32 = 6;
+    case i                          # switch-case in hipster style
+    when 1; printf("1\n");
+    when 2, 3; printf("2 or 3\n");
+    else
+        printf("%d\n", i);
+    end
+
+    return 0;
+end
+
