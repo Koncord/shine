@@ -90,7 +90,8 @@ LLVMValue *NamedVariables::findNamedVariable(const std::string &name) // reverse
     for (auto it = namedVariablesStack.rbegin(); it != namedVariablesStack.rend(); ++it)
     {
         auto vname = name + "_" + std::to_string(level);
-        if (auto v = std::find_if(it->begin(), it->end(), [&vname](const auto &val){return val.first == vname;}); v != it->end())
+        if (auto v = std::find_if(it->begin(), it->end(), [&vname](const auto &val) { return val.first == vname; });
+                v != it->end())
             return &v->second;
         level -= 1;
     }
@@ -204,7 +205,7 @@ Value *LLVMCodegenImpl::createCondition(
 
     Value *const0 = nullptr;
 
-    if(isFp)
+    if (isFp)
         const0 = ConstantFP::get(*llvmctx->ctx, APFloat(0.0));
     else
         const0 = ConstantInt::get(condition.value->getType(), 0);
@@ -304,7 +305,7 @@ void LLVMCodegenImpl::visit_call(const node::CallPtr &node)
             {
                 if (value->getType()->getPointerElementType()->isArrayTy())
                 {
-                    std::vector<Value*> arr;
+                    std::vector<Value *> arr;
                     arr.push_back(builder->getInt64(0));
                     arr.push_back(builder->getInt64(0));
                     value = builder->CreateInBoundsGEP(value, arr);
@@ -626,14 +627,14 @@ void LLVMCodegenImpl::visit_if(const node::IfPtr &node)
     if (node->elseBlock != nullptr)
     {
         elseBB = BasicBlock::Create(*llvmctx->ctx, "if.else");
-        if(node->negate)
+        if (node->negate)
             builder->CreateCondBr(condition, elseBB, ifBB);
         else
             builder->CreateCondBr(condition, ifBB, elseBB);
     }
     else
     {
-        if(node->negate)
+        if (node->negate)
             builder->CreateCondBr(condition, endBB, ifBB);
         else
             builder->CreateCondBr(condition, ifBB, endBB);
@@ -678,7 +679,7 @@ void LLVMCodegenImpl::visit_case(const node::CasePtr &node)
 
     breakStack.push(swEpilogBB);
 
-    for(const auto &when : node->whenStmts)
+    for (const auto &when : node->whenStmts)
     {
         BasicBlock *bb = BasicBlock::Create(*llvmctx->ctx, "sw.bb");
 
@@ -693,14 +694,14 @@ void LLVMCodegenImpl::visit_case(const node::CasePtr &node)
         swCases.emplace_back(when->block, bb);
     }
 
-    for(const auto &[body, bb] : swCases)
+    for (const auto &[body, bb] : swCases)
     {
         owner->getBasicBlockList().push_back(bb);
 
         builder->SetInsertPoint(bb);
         visit(body);
         popValue(); // ignored value
-        if(!isBlockContainsJumpCond(body))
+        if (!isBlockContainsJumpCond(body))
             builder->CreateBr(swEpilogBB);
     }
 
@@ -710,7 +711,7 @@ void LLVMCodegenImpl::visit_case(const node::CasePtr &node)
     {
         visit(node->elseBlock);
         popValue(); // ignored value
-        if(!isBlockContainsJumpCond(node->elseBlock))
+        if (!isBlockContainsJumpCond(node->elseBlock))
             builder->CreateBr(swEpilogBB);
     }
 
@@ -808,7 +809,7 @@ void LLVMCodegenImpl::visit_array(const node::ArrayPtr &node)
     throw UnhandledNode(filename, node);
 
     std::vector<Constant *> arr;
-    for(const auto &v : node->vals)
+    for (const auto &v : node->vals)
     {
         visit(v);
         auto rval = popValue();
