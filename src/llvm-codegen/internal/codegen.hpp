@@ -68,6 +68,7 @@ namespace shine
         std::unordered_map<std::string, std::vector<bool>> functionArgSigns;
         std::unordered_map<std::string, bool> functionRetSign;
         std::map<std::string, llvm::Type*> registeredTypes;
+        std::map<std::string, std::map<std::string, int>> structTypeIdx;
         util::stack<LLVMValue> valStack;
         NamedVariables namedVariables;
         util::stack<llvm::BasicBlock*> breakStack;

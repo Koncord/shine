@@ -759,8 +759,8 @@ void LLVMCodegenImpl::visit_type(const node::TypePtr &node)
     if (node->isArray)
     {
         unsigned elems = node->arrSize;
-            //type = llvm::PointerType::getUnqual(ArrayType::get(type, elems));
-            type = ArrayType::get(type, elems);
+        //type = llvm::PointerType::getUnqual(ArrayType::get(type, elems));
+        type = ArrayType::get(type, elems);
     }
     pushValue(type);
 }
@@ -803,6 +803,22 @@ void LLVMCodegenImpl::visit_break(const node::BreakPtr &node)
 
 void LLVMCodegenImpl::visit_slot(const node::SlotPtr &node)
 {
+    visit(node->left);
+    //visit(node->right);
+    //auto right = popValue();
+    Value *left = popValue().value;
+
+    Type *leftPtrT = left->getType()->getPointerElementType();
+
+    if (leftPtrT->isStructTy())
+    {
+        auto memberName = node->right->as<node::Id>()->val;
+        auto typeIdx = structTypeIdx.at(leftPtrT->getStructName()).at(memberName);
+        Value *argValuePtr = builder->CreateStructGEP(left, typeIdx, left->getName() + "." + memberName);
+        pushValue(argValuePtr);
+        return;
+    }
+
     throw UnhandledNode(filename, node);
 }
 
@@ -856,7 +872,23 @@ void LLVMCodegenImpl::visit_hash(const node::HashPtr &node)
 
 void LLVMCodegenImpl::visit_struct(const node::StructPtr &node)
 {
-    throw UnhandledNode(filename, node);
+
+    std::vector<Type *> elements;
+    std::map<std::string, int> types;
+    int idx = 0;
+    for (const auto &field : node->fields)
+    {
+        visit(field->type);
+        auto type = popValue().type;
+        for (const auto &id : field->vec)
+        {
+            elements.push_back(type);
+            types.emplace(id->val, idx++);
+        }
+    }
+
+    registerType(node->name, StructType::create(*llvmctx->ctx, elements, node->name));
+    structTypeIdx.emplace(node->name, types);
 }
 
 void LLVMCodegenImpl::visit_vaarg(const node::VaArgPtr &node)
