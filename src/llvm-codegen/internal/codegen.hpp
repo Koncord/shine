@@ -111,7 +111,10 @@ namespace shine
         );
 
         llvm::Value *createCondition(const node::NodePtr &node, const node::NodePtr &expr, const std::string &conditionName = "");
+
         void registerTypes();
+        void registerType(const std::string &typeName, llvm::Type *type);
+        llvm::Type *getRegisteredType(const std::string &typeName, bool getPtrType);
 
         static bool isBlockContains(const node::BlockPtr &block, NodeType nodeType);
         static bool isBlockContainsJumpCond(const node::BlockPtr &block);

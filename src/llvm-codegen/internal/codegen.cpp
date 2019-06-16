@@ -25,27 +25,33 @@ LLVMCodegenImpl::LLVMCodegenImpl(const node::NodePtr &root, LLVMCtx *llvmctx, st
     visit(root);
 }
 
+void LLVMCodegenImpl::registerType(const std::string &name, llvm::Type *type)
+{
+    registeredTypes.emplace(std::make_pair(name, false), type);
+    registeredTypes.emplace(std::make_pair(name, true), type->getPointerTo());
+}
+
 void LLVMCodegenImpl::registerTypes()
 {
     registeredTypes.emplace(std::make_pair("void", false), builder->getVoidTy());
     registeredTypes.emplace(std::make_pair("void", true), builder->getInt8PtrTy());
 
-    auto insert = [this](const std::string &name, Type *type) {
-        registeredTypes.emplace(std::make_pair(name, false), type);
-        registeredTypes.emplace(std::make_pair(name, true), type->getPointerTo());
-    };
+    registerType("double", builder->getDoubleTy());
+    registerType("float", builder->getFloatTy());
+    registerType("boolean", builder->getInt1Ty());
+    registerType("string", builder->getInt8PtrTy());
 
-    insert("double", builder->getDoubleTy());
-    insert("float", builder->getFloatTy());
-    insert("boolean", builder->getInt1Ty());
-    insert("string", builder->getInt8PtrTy());
-
-    for(uint32_t bitwidth = 8; bitwidth <= 64; bitwidth <<= 1) // integer types
+    for (uint32_t bitwidth = 8; bitwidth <= 64; bitwidth <<= 1) // integer types
     {
         std::string bw = std::to_string(bitwidth);
-        insert("u" + bw, builder->getIntNTy(bitwidth));
-        insert("i" + bw, builder->getIntNTy(bitwidth));
+        registerType("u" + bw, builder->getIntNTy(bitwidth));
+        registerType("i" + bw, builder->getIntNTy(bitwidth));
     }
+}
+
+Type *LLVMCodegenImpl::getRegisteredType(const std::string &typeName, bool getPtrType)
+{
+    return registeredTypes.at(std::make_pair(typeName, getPtrType));
 }
 
 AllocaInst *LLVMCodegenImpl::CreateEntryBlockAlloca(Function *function, Type *type, const std::string &varName)
@@ -715,27 +721,23 @@ void LLVMCodegenImpl::visit_case(const node::CasePtr &node)
 void LLVMCodegenImpl::visit_subscript(const node::SubscriptPtr &node)
 {
     visit(node->left);
-    auto left = popValue();
+    auto left = popValue().value;
     visit(node->right);
-    auto idx = popValue();
+    auto idx = popValue().value;
 
-    auto ltype = left.value->getType();
-    auto isStackArr = ltype->isPointerTy() ? ltype->getPointerElementType()->isArrayTy() : false;
+    auto ltype = left->getType();
+    auto isPtrToPtr = ltype->isPointerTy() ? ltype->getPointerElementType()->isPointerTy() : false;
 
-    if (isStackArr)
+
+    if (!isPtrToPtr)
     {
-        std::vector<Value*> arr;
-        arr.push_back(builder->getInt64(0));
-        arr.push_back(idx.value);
-        pushValue(builder->CreateInBoundsGEP(left.value, arr));
+        std::vector<Value *> arr;
+        arr.push_back(builder->getInt32(0));
+        arr.push_back(builder->CreateZExt(idx, builder->getInt32Ty()));
+        pushValue(builder->CreateInBoundsGEP(left, arr));
     }
     else
-    {
-        std::vector<Value*> arr;
-        arr.push_back(builder->getInt64(0));
-        arr.push_back(idx.value);
-        pushValue(builder->CreateInBoundsGEP(builder->CreateLoad(left.value), idx.value));
-    }
+        pushValue(builder->CreateInBoundsGEP(builder->CreateLoad(left), idx));
 }
 
 void LLVMCodegenImpl::visit_type(const node::TypePtr &node)
