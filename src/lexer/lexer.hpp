@@ -21,7 +21,7 @@ namespace shine
         int hex_literal();
 
         char scan_char(int c);
-        TokenType scan_string(int quote);
+        TokenType scan_string();
 
         TokenType scan_number(int c);
 

@@ -167,10 +167,12 @@ node::NodePtr Parser::hash_exprssion()
 node::NodePtr Parser::type_exprssion()
 {
     debug("type_exprssion");
-    bool isPtr = accept(TokenType::OpMul);
+    int ptrLevel = 0;
+    while(accept(TokenType::OpMul))
+        ++ptrLevel;
     if (!lexer->isType(TokenType::Id)) return nullptr;
 
-    auto ret = std::make_shared<node::Type>(std::get<std::string>(lexer->getToken().value), isPtr, lexer->getPos());
+    auto ret = std::make_shared<node::Type>(std::get<std::string>(lexer->getToken().value), ptrLevel, lexer->getPos());
 
     lexer->getNextToken();
     ret->isArray = accept(TokenType::LBrack);

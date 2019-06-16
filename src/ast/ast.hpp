@@ -197,14 +197,14 @@ namespace shine
 
         struct Type : Node
         {
-            Type(std::string tname, bool isPtr, Position pos) : Node(NodeType::Type, pos),
+            Type(std::string tname, int ptrLevel, Position pos) : Node(NodeType::Type, pos),
                                                                 tname(std::move(tname)),
-                                                                isPtr(isPtr),
+                                                                ptrLevel(ptrLevel),
                                                                 arrSize(0),
                                                                 isArray(false) {}
 
             std::string tname;
-            bool isPtr;
+            int ptrLevel;
             uint32_t arrSize;
             bool isArray;
         };

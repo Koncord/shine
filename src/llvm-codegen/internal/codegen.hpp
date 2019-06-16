@@ -67,7 +67,7 @@ namespace shine
         std::unordered_map<std::string, llvm::Function *> functions;
         std::unordered_map<std::string, std::vector<bool>> functionArgSigns;
         std::unordered_map<std::string, bool> functionRetSign;
-        std::map<std::pair<std::string, bool>, llvm::Type*> registeredTypes;
+        std::map<std::string, llvm::Type*> registeredTypes;
         util::stack<LLVMValue> valStack;
         NamedVariables namedVariables;
         util::stack<llvm::BasicBlock*> breakStack;
@@ -112,7 +112,7 @@ namespace shine
 
         llvm::Value *createCondition(const node::NodePtr &node, const node::NodePtr &expr, const std::string &conditionName = "");
 
-        void registerTypes();
+        void registerBuiltinNumericTypes();
         void registerType(const std::string &typeName, llvm::Type *type);
         llvm::Type *getRegisteredType(const std::string &typeName, bool getPtrType);
 

@@ -146,13 +146,13 @@ namespace shine
         return c;
     }
 // Scan string.
-    TokenType Lexer::scan_string(int quote)
+    TokenType Lexer::scan_string()
     {
         int c;
         std::string buf;
         token(String);
 
-        while (quote != (c = next()))
+        while ('\"' != (c = next()))
         {
             c = scan_char(c);
             buf.push_back(c);
@@ -411,7 +411,7 @@ namespace shine
                 newLine();
                 goto scan;
             case '"':
-                return scan_string(c);
+                return scan_string();
             case '\'':
             {
                 tok.value = (long) scan_char(next());

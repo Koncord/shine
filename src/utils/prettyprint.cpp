@@ -407,7 +407,7 @@ namespace
         {
             print_func("(type ");
 
-            if (node->isPtr)
+            for (int i = 0; i < node->ptrLevel; ++i)
                 print_func("pointer to ");
 
             if (node->isArray)

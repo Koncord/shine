@@ -1,6 +1,7 @@
+* possibility to get function pointer
 * modules support
-* hashmap type support
-* string manipulations
 * runtime library
+  * hashmap type support
+  * string manipulations
 * AST manipulations from code
 * self bootstrap language

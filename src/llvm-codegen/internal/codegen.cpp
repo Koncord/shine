@@ -13,7 +13,7 @@ LLVMCodegenImpl::LLVMCodegenImpl(const node::NodePtr &root, LLVMCtx *llvmctx, st
     this->filename = std::move(filename);
     this->root = root;
 
-    registerTypes();
+    registerBuiltinNumericTypes();
     createProto("alloca",
                 std::make_shared<node::Type>("void", true, Position {}), {
                         std::make_shared<node::Decl>((std::vector<node::IdPtr>) {
@@ -27,15 +27,11 @@ LLVMCodegenImpl::LLVMCodegenImpl(const node::NodePtr &root, LLVMCtx *llvmctx, st
 
 void LLVMCodegenImpl::registerType(const std::string &name, llvm::Type *type)
 {
-    registeredTypes.emplace(std::make_pair(name, false), type);
-    registeredTypes.emplace(std::make_pair(name, true), type->getPointerTo());
+    registeredTypes.emplace(name, type);
 }
 
-void LLVMCodegenImpl::registerTypes()
+void LLVMCodegenImpl::registerBuiltinNumericTypes()
 {
-    registeredTypes.emplace(std::make_pair("void", false), builder->getVoidTy());
-    registeredTypes.emplace(std::make_pair("void", true), builder->getInt8PtrTy());
-
     registerType("double", builder->getDoubleTy());
     registerType("float", builder->getFloatTy());
     registerType("boolean", builder->getInt1Ty());
@@ -51,7 +47,7 @@ void LLVMCodegenImpl::registerTypes()
 
 Type *LLVMCodegenImpl::getRegisteredType(const std::string &typeName, bool getPtrType)
 {
-    return registeredTypes.at(std::make_pair(typeName, getPtrType));
+    return registeredTypes.at(typeName);
 }
 
 AllocaInst *LLVMCodegenImpl::CreateEntryBlockAlloca(Function *function, Type *type, const std::string &varName)
@@ -743,19 +739,30 @@ void LLVMCodegenImpl::visit_subscript(const node::SubscriptPtr &node)
 
 void LLVMCodegenImpl::visit_type(const node::TypePtr &node)
 {
-    if (auto it = registeredTypes.find(std::make_pair(node->tname, node->isPtr)); it != registeredTypes.end())
+    Type *type = nullptr;
+
+    if (node->tname == "void")
     {
-        auto type = it->second;
-        if (node->isArray)
-        {
-            unsigned elems = node->arrSize;
-            //type = llvm::PointerType::getUnqual(ArrayType::get(type, elems));
-            type = ArrayType::get(type, elems);
-        }
-        pushValue(type);
+        if (node->ptrLevel > 0)
+            type = builder->getInt8PtrTy();
+        else
+            type = builder->getVoidTy();
     }
+    else if (auto it = registeredTypes.find(node->tname); it != registeredTypes.end())
+        type = it->second;
     else
         throw UnhandledNode(filename, node);
+
+    for (int i = 0; i < node->ptrLevel; ++i) // get pointer or pointer to N pointer
+        type = type->getPointerTo();
+
+    if (node->isArray)
+    {
+        unsigned elems = node->arrSize;
+            //type = llvm::PointerType::getUnqual(ArrayType::get(type, elems));
+            type = ArrayType::get(type, elems);
+    }
+    pushValue(type);
 }
 
 
