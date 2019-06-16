@@ -20,7 +20,7 @@ namespace shine
         return msg.c_str();
     }
 
-    ParseException::ParseException(Lexer *lexer, const std::string& msg)
+    ParseException::ParseException(Lexer *lexer, const std::string &msg)
             : lexer(lexer),
               ShineException(lexer->filename, lexer->getPos(), "Syntax error:")
     {
@@ -30,10 +30,12 @@ namespace shine
         this->msg += sstr.str();
     }
 
-    ParseException::ParseException(Parser *parser, const std::string& msg)
-            : parser(parser),
-              lexer(parser->lexer),
-              ShineException(parser->lexer->filename, parser->lexer->getPos(), "Parse error in ")
+    ParseException::ParseException(Parser *parser, const std::string &msg)
+            : ParseException(parser, parser->lexer->getPos(), msg) {}
+
+    ParseException::ParseException(Parser *parser, Position pos, const std::string &msg)
+            : lexer(parser->lexer),
+              ShineException(parser->lexer->filename, pos, "Parse error in ")
     {
         std::stringstream sstr;
 
@@ -48,7 +50,7 @@ namespace shine
         this->msg += sstr.str();
     }
 
-    UnhandledNode::UnhandledNode(const std::string &filename, const node::NodePtr& node)
+    UnhandledNode::UnhandledNode(const std::string &filename, const node::NodePtr &node)
             : ShineException(filename, node->pos, "Unhandled node type:")
     {
         std::stringstream sstr;

@@ -200,11 +200,13 @@ namespace shine
             Type(std::string tname, bool isPtr, Position pos) : Node(NodeType::Type, pos),
                                                                 tname(std::move(tname)),
                                                                 isPtr(isPtr),
-                                                                arrSize(0) {}
+                                                                arrSize(0),
+                                                                isArray(false) {}
 
             std::string tname;
             bool isPtr;
             uint32_t arrSize;
+            bool isArray;
         };
 
         struct VaArg : Node

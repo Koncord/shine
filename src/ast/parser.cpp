@@ -99,6 +99,7 @@ bool Parser::arg_list(std::vector<node::NodePtr> &vals, TokenType delim)
 node::NodePtr Parser::array_exprssion()
 {
     auto node = std::make_shared<node::Array>(lexer->getPos());
+    node->pos.linepos -= 1;
     debug("array_exprssion");
 
     if (!accept(TokenType::LBrack)) return nullptr;
@@ -172,13 +173,16 @@ node::NodePtr Parser::type_exprssion()
     auto ret = std::make_shared<node::Type>(std::get<std::string>(lexer->getToken().value), isPtr, lexer->getPos());
 
     lexer->getNextToken();
-    bool isArray = accept(TokenType::LBrack);
+    ret->isArray = accept(TokenType::LBrack);
 
-    if(isArray)
+    if(ret->isArray)
     {
-        expect(TokenType::I64, "expected number");
-        ret->arrSize = std::get<int64_t>(lexer->getToken().value);
-        lexer->getNextToken();
+        //expect(TokenType::I64, "expected number");
+        if (lexer->isType(TokenType::I64))
+        {
+            ret->arrSize = std::get<int64_t>(lexer->getToken().value);
+            lexer->getNextToken();
+        }
         expectNext(TokenType::RBrack, "type missing clossing ']'");
     }
 
@@ -691,8 +695,15 @@ node::ArgsPtr Parser::call_args()
     debug("args");
     do
     {
+        auto copyCtx = ctx;
         if ((node = expression()) == nullptr)
             return nullptr;
+
+        if (node->is(NodeType::Array) || node->is(NodeType::Hash))
+        {
+            ctx = copyCtx;
+            throw ParseException(this, node->pos, "expected expression");
+        }
 
         if (accept(TokenType::Colon))
         {

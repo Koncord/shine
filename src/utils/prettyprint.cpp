@@ -410,12 +410,12 @@ namespace
             if (node->isPtr)
                 print_func("pointer to ");
 
-            if (node->arrSize != 0)
+            if (node->isArray)
                 print_func("array ");
 
             print_func("%s", node->tname.c_str());
 
-            if (node->arrSize != 0)
+            if (node->isArray)
             {
                 print_func("[%d]", node->arrSize);
             }

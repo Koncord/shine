@@ -24,6 +24,7 @@ namespace shine
     public:
         explicit ParseException(Lexer *lexer, const std::string& msg = "");
         explicit ParseException(Parser *parser, const std::string& msg = "");
+        explicit ParseException(Parser *parser, Position pos, const std::string& msg = "");
         ~ParseException() override = default;
     };
 

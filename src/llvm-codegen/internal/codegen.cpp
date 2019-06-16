@@ -306,8 +306,8 @@ void LLVMCodegenImpl::visit_call(const node::CallPtr &node)
                 if (value->getType()->getPointerElementType()->isArrayTy())
                 {
                     std::vector<Value *> arr;
-                    arr.push_back(builder->getInt64(0));
-                    arr.push_back(builder->getInt64(0));
+                    arr.push_back(builder->getInt32(0));
+                    arr.push_back(builder->getInt32(0));
                     value = builder->CreateInBoundsGEP(value, arr);
                 }
                 else
@@ -746,7 +746,7 @@ void LLVMCodegenImpl::visit_type(const node::TypePtr &node)
     if (auto it = registeredTypes.find(std::make_pair(node->tname, node->isPtr)); it != registeredTypes.end())
     {
         auto type = it->second;
-        if (node->arrSize != 0)
+        if (node->isArray)
         {
             unsigned elems = node->arrSize;
             //type = llvm::PointerType::getUnqual(ArrayType::get(type, elems));
@@ -806,8 +806,6 @@ void LLVMCodegenImpl::visit_array(const node::ArrayPtr &node)
     if (left.constant)
         throw ShineException(filename, node->pos, "cannot assign to variable with constant qualifier");
 
-    throw UnhandledNode(filename, node);
-
     std::vector<Constant *> arr;
     for (const auto &v : node->vals)
     {
@@ -817,13 +815,31 @@ void LLVMCodegenImpl::visit_array(const node::ArrayPtr &node)
         arr.push_back(cast<Constant>(IntCast(left, rval)));
     }
 
-    auto t = left.value->getType()->getPointerElementType()->getArrayElementType();
-    auto GV = ConstantArray::get(ArrayType::get(t, arr.size()), arr);
-    /*Constant *Zero = ConstantInt::get(Type::getInt32Ty(*llvmctx->ctx), 0);
-    Constant *Indices[] = {Zero, Zero};
-    ConstantExpr::getInBoundsGetElementPtr(t, GV, Indices)*/
-    //pushValue(GV);
-    namedVariables.insertVariable("arr", GV);
+    auto arrType = cast<ArrayType>(left.value->getType()->getPointerElementType());
+
+    uint64_t numElements = arrType->getNumElements();
+
+    if (numElements == 0) // recreate array with proper size
+    {
+        numElements = arr.size();
+        /*auto T = left.value->getType()->getPointerElementType()->getArrayElementType();
+        auto arrT = ArrayType::get(T, arr.size());
+        auto name = left.value->getName().str();
+
+        auto newVal = CreateEntryBlockAlloca(builder->GetInsertBlock()->getParent(), arrT, "");
+        left.value->replaceAllUsesWith(newVal);
+        left.value = newVal;*/
+    }
+
+    arr.resize(numElements, cast<Constant>(IntCast(left, builder->getInt8(0))));
+
+    ArrayType *arrayType = ArrayType::get(arrType->getArrayElementType(), numElements);
+    Constant *init = ConstantArray::get(arrayType, arr);
+    auto v = new GlobalVariable(*llvmctx->module, init->getType(), true, GlobalValue::PrivateLinkage, init);
+    std::vector<Value *> arr2;
+    arr2.push_back(builder->getInt32(0));
+    arr2.push_back(builder->getInt32(0));
+    builder->CreateMemCpy(left.value, 1,  builder->CreateInBoundsGEP(v, arr2), 1, numElements);
 }
 
 void LLVMCodegenImpl::visit_hash(const node::HashPtr &node)
