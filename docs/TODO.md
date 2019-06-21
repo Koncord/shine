@@ -1,4 +1,4 @@
-* possibility to get function pointer
+* BitCast incompatible types
 * modules support
 * runtime library
   * hashmap type support

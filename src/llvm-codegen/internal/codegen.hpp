@@ -64,9 +64,13 @@ namespace shine
         LLVMCtx *llvmctx;
         std::unique_ptr<llvm::IRBuilder<>> builder;
 
-        std::unordered_map<std::string, llvm::Function *> functions;
-        std::unordered_map<std::string, std::vector<bool>> functionArgSigns;
-        std::unordered_map<std::string, bool> functionRetSign;
+
+        struct Func
+        {
+            LLVMValue value;
+            std::vector<bool> argSigns;
+        };
+        std::unordered_map<std::string, Func> functions;
         std::map<std::string, llvm::Type*> registeredTypes;
         std::map<std::string, std::map<std::string, int>> structTypeIdx;
         util::stack<LLVMValue> valStack;
@@ -104,6 +108,16 @@ namespace shine
         void pushValue(LLVMValue value);
 
         bool isIntegerType(std::string ref, int &bitwidth, bool *isSigned = nullptr);
+
+        struct Params
+        {
+            std::vector<llvm::Type *> params;
+            std::vector<bool> signs;
+            std::vector<std::string> names;
+            bool isVarArg = false;
+        };
+
+        Params getLLVMParams(const std::vector<node::NodePtr> &params);
 
         llvm::Function *createProto(
                 const std::string &name,

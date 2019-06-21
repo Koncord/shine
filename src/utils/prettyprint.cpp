@@ -410,6 +410,9 @@ namespace
             for (int i = 0; i < node->ptrLevel; ++i)
                 print_func("pointer to ");
 
+            if (!node->funParams.empty())
+                print_func ("function ");
+
             if (node->isArray)
                 print_func("array ");
 
@@ -418,6 +421,22 @@ namespace
             if (node->isArray)
             {
                 print_func("[%d]", node->arrSize);
+            }
+
+            if (!node->funParams.empty())
+            {
+                print_func("(");
+                ++indents;
+                for (int i = 0; i < node->funParams.size(); ++i)
+                {
+                    visit(node->funParams[i]);
+                    if (i != node->funParams.size() - 1)
+                        print_func(", ");
+                }
+                --indents;
+                print_func(")");
+                indent();
+                print_func("\n");
             }
 
             print_func(")");

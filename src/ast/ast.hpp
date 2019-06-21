@@ -201,12 +201,15 @@ namespace shine
                                                                 tname(std::move(tname)),
                                                                 ptrLevel(ptrLevel),
                                                                 arrSize(0),
-                                                                isArray(false) {}
+                                                                isArray(false),
+                                                                isFunc(false) {}
 
             std::string tname;
             int ptrLevel;
             uint32_t arrSize;
             bool isArray;
+            bool isFunc;
+            std::vector<node::NodePtr> funParams;
         };
 
         struct VaArg : Node

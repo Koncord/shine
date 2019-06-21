@@ -188,6 +188,13 @@ node::NodePtr Parser::type_exprssion()
         expectNext(TokenType::RBrack, "type missing clossing ']'");
     }
 
+    if (accept(TokenType::LParen))
+    {
+        ret->isFunc = true;
+        ret->funParams = function_params();
+        expectNext(TokenType::RParen, "type missing clossing ')'");
+    }
+
     return ret;
 }
 

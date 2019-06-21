@@ -134,55 +134,64 @@ bool LLVMCodegenImpl::isIntegerType(std::string ref, int &bitwidth, bool *isSign
     return false;
 }
 
-Function *LLVMCodegenImpl::createProto(
-        const std::string &name,
-        const node::TypePtr &nodeType,
-        const std::vector<node::NodePtr> &params
-)
+LLVMCodegenImpl::Params LLVMCodegenImpl::getLLVMParams(const std::vector<node::NodePtr> &params)
 {
-    std::vector<Type *> args;
-    std::vector<std::string> names;
-
-    bool isVarArg = false;
+    LLVMCodegenImpl::Params args {};
     int ignored;
-
-    bool sign = false;
-    isIntegerType(nodeType->tname, ignored, &sign);
-    functionRetSign[name] = sign;
-
-    auto &fArgSigns = functionArgSigns[name];
-
     for (const auto &arg : params)
     {
         if (arg->is(NodeType::VaArg))
         {
-            isVarArg = true;
+            args.isVarArg = true;
             break;
         }
         if (!arg->is(NodeType::Decl))
             throw UnhandledNode(filename, arg);
         const auto &declNode = arg->as<node::Decl>();
         visit(declNode->type);
-        args.push_back(popValue().type);
-        names.push_back(declNode->vec[0]->val);
-        sign = false;
+        Type *type = popValue().type;
+        args.names.emplace_back(declNode->vec[0]->val);
+        bool sign = false;
         isIntegerType(declNode->type->tname, ignored, &sign);
-        fArgSigns.push_back(sign);
+        args.params.emplace_back(type);
+        args.signs.push_back(sign);
     }
+
+
+    return std::move(args);
+}
+
+Function *LLVMCodegenImpl::createProto(
+        const std::string &name,
+        const node::TypePtr &nodeType,
+        const std::vector<node::NodePtr> &params
+)
+{
+    int ignored;
+
+    Function *llvmFunc;
+    auto &func = functions[name];
+
+    isIntegerType(nodeType->tname, ignored, &func.value.sign);
+
+    auto args = getLLVMParams(params);
+
+    func.argSigns = std::move(args.signs);
 
     visit(nodeType);
     llvm::Type *retType = popValue().type;
 
-    FunctionType *fnType = FunctionType::get(retType, args, isVarArg);
+    FunctionType *fnType = FunctionType::get(retType, args.params, args.isVarArg);
     auto linkage = Function::ExternalLinkage;
-    auto func = Function::Create(fnType, linkage, name, llvmctx->module.get());
+    llvmFunc = Function::Create(fnType, linkage, name, llvmctx->module.get());
 
     int idx = 0;
-    for (auto &arg : func->args())
-        arg.setName(names[idx++]);
-    functions[name] = func;
+    for (auto &arg : llvmFunc->args())
+        arg.setName(args.names[idx++]);
 
-    return func;
+    func.value.value = llvmFunc;
+
+    return llvmFunc;
 }
 
 Value *LLVMCodegenImpl::createCondition(
@@ -251,7 +260,7 @@ void LLVMCodegenImpl::visit_id(const node::IdPtr &node)
     if (auto val = namedVariables.findNamedVariable(node->val); val != nullptr)
         pushValue(*val);
     else if (auto it = functions.find(node->val); it != functions.end())
-        pushValue(it->second);
+        pushValue(it->second.value);
     else
         throw UnhandledNode(filename, node);
 }
@@ -282,12 +291,24 @@ void LLVMCodegenImpl::visit_boolean(const node::BooleanPtr &node)
 void LLVMCodegenImpl::visit_call(const node::CallPtr &node)
 {
     visit(node->expr);
-    auto func = cast<Function>(popValue().value);
+    auto expr = popValue();
+    Value *func = expr.value;
+    FunctionType *fnType = nullptr;
 
-    if (!func->getType()->isPointerTy() || !func->getType()->getPointerElementType()->isFunctionTy())
+    if ( auto type = func->getType(); type->isPointerTy())
     {
-        throw UnhandledNode(filename, node->expr);
+        auto ptrType = type->getPointerElementType();
+        if (ptrType->isPointerTy() && ptrType->getPointerElementType()->isFunctionTy())
+        {
+            func = builder->CreateLoad(func);
+            fnType = cast<FunctionType>(ptrType->getPointerElementType());
+        }
+        else if (ptrType->isFunctionTy())
+            fnType = cast<FunctionType>(ptrType);
+        else
+            throw UnhandledNode(filename, node->expr);
     }
+
 
     std::vector<Value *> args;
     for (const auto &arg : node->args->vec)
@@ -310,7 +331,7 @@ void LLVMCodegenImpl::visit_call(const node::CallPtr &node)
                     value = builder->CreateLoad(value);
             }
         }
-        if (func->isVarArg())
+        if (fnType->isVarArg())
         {
             if (value->getType()->isFloatTy()) // varag does not support 32-bit floats
                 value = builder->CreateFPExt(value, builder->getDoubleTy());
@@ -324,15 +345,15 @@ void LLVMCodegenImpl::visit_call(const node::CallPtr &node)
     {
         auto fname = node->expr->as<node::Id>()->val;
         if (fname == "alloca") // built-in
-            ret = builder->CreateAlloca(func->getReturnType(), args[0]);
+            ret = builder->CreateAlloca(fnType->getReturnType(), args[0]);
         else if (fname == "cast")
         {
             //builder->CreateBitCast()
         }
         else
         {
-            ret = builder->CreateCall(func, args);
-            ret.sign = functionRetSign.at(fname);
+            ret = builder->CreateCall(fnType, func, args);
+            ret.sign = expr.sign;
         }
     }
     pushValue(ret);
@@ -346,7 +367,11 @@ void LLVMCodegenImpl::visit_unary_op(const node::UnaryOpPtr &node)
     LLVMValue result {};
     if (isa<Constant>(value.value))
     {
-        result = createUnaryOperation(node, value);
+        result.sign = value.sign;
+        if (node->op == TokenType::OpBitAnd) // address-of
+            result.value = builder->CreatePtrToInt(value.value, builder->getInt64Ty());
+        else
+            result = createUnaryOperation(node, value);
     }
     else
     {
@@ -412,7 +437,10 @@ void LLVMCodegenImpl::visit_binary_op(const node::BinaryOpPtr &node)
 
 void LLVMCodegenImpl::visit_function(const node::FunctionPtr &node)
 {
-    Function *func = functions[node->name]; // check proto
+    Function *func = nullptr;
+
+    if (auto it = functions.find(node->name); it != functions.end())
+        func = cast<Function>(it->second.value.value);
 
     if (func == nullptr) // if no proto, create it
         func = createProto(node->name, node->type, node->params);
@@ -430,7 +458,7 @@ void LLVMCodegenImpl::visit_function(const node::FunctionPtr &node)
         builder->CreateStore(&arg, alloca);
 
         // Add arguments to variable symbol table.
-        namedVariables.insertVariable(arg.getName(), LLVMValue(alloca, functionArgSigns.at(node->name).at(i++)));
+        namedVariables.insertVariable(arg.getName(), LLVMValue(alloca, functions.at(node->name).argSigns.at(i++)));
     }
 
     if (!isBlockContains(node->block, NodeType::Return)) // todo: add checks for non void functions
@@ -752,6 +780,14 @@ void LLVMCodegenImpl::visit_type(const node::TypePtr &node)
         type = it->second;
     else
         throw UnhandledNode(filename, node);
+
+    if (node->isFunc)
+    {
+        auto args = getLLVMParams(node->funParams);
+        type = FunctionType::get(type, args.params, args.isVarArg)->getPointerTo();
+        pushValue(type);
+        return;
+    }
 
     for (int i = 0; i < node->ptrLevel; ++i) // get pointer or pointer to N pointer
         type = type->getPointerTo();
