@@ -55,10 +55,10 @@ const node::NodePtr &Parser::expect(const node::NodePtr &node, const std::string
  * '(' expression ')'
  */
 
-node::NodePtr Parser::paren_exprssion()
+node::NodePtr Parser::paren_expression()
 {
     node::NodePtr node;
-    debug("paren_exprssion");
+    debug("paren_expression");
     if (!accept(TokenType::LParen)) return nullptr;
     if ((node = expression()) == nullptr) return nullptr;
 
@@ -96,11 +96,11 @@ bool Parser::arg_list(std::vector<node::NodePtr> &vals, TokenType delim)
  * '[' arg_list? ']'
  */
 
-node::NodePtr Parser::array_exprssion()
+node::NodePtr Parser::array_expression()
 {
     auto node = std::make_shared<node::Array>(lexer->getPos());
     node->pos.linepos -= 1;
-    debug("array_exprssion");
+    debug("array_expression");
 
     if (!accept(TokenType::LBrack)) return nullptr;
 
@@ -148,10 +148,10 @@ bool Parser::hash_pairs(std::vector<node::HashPairPtr> &pairs, TokenType delim)
  * '{' hash_pairs? '}'
  */
 
-node::NodePtr Parser::hash_exprssion()
+node::NodePtr Parser::hash_expression()
 {
     auto node = std::make_shared<node::Hash>(lexer->getPos());
-    debug("hash_exprssion");
+    debug("hash_expression");
 
     if (!accept(TokenType::LBrace)) return nullptr;
     ctx = "hash expression";
@@ -164,9 +164,9 @@ node::NodePtr Parser::hash_exprssion()
  * type ('[' expression ']')?
  */
 
-node::NodePtr Parser::type_exprssion()
+node::NodePtr Parser::type_expression()
 {
-    debug("type_exprssion");
+    debug("type_expression");
     int ptrLevel = 0;
     while(accept(TokenType::OpMul))
         ++ptrLevel;
@@ -185,26 +185,26 @@ node::NodePtr Parser::type_exprssion()
             ret->arrSize = std::get<int64_t>(lexer->getToken().value);
             lexer->getNextToken();
         }
-        expectNext(TokenType::RBrack, "type missing clossing ']'");
+        expectNext(TokenType::RBrack, "type missing closing ']'");
     }
 
     if (accept(TokenType::LParen))
     {
         ret->isFunc = true;
         ret->funParams = function_params();
-        expectNext(TokenType::RParen, "type missing clossing ')'");
+        expectNext(TokenType::RParen, "type missing closing ')'");
     }
 
     return ret;
 }
 
 /*
- * id (',' id)* ':' type_exprssion
+ * id (',' id)* ':' type_expression
  */
 
-node::NodePtr Parser::decl_exprssion(bool needType)
+node::NodePtr Parser::decl_expression(bool needType)
 {
-    debug("decl_exprssion");
+    debug("decl_expression");
     ctx = "declaration expression";
 
     if (!lexer->isType(TokenType::Id)) return nullptr;
@@ -231,7 +231,7 @@ node::NodePtr Parser::decl_exprssion(bool needType)
         return std::make_shared<node::Decl>(vec, nullptr, pos);
     }
 
-    node::TypePtr type = expect(type_exprssion(), "expecting type")->as<node::Type>();
+    node::TypePtr type = expect(type_expression(), "expecting type")->as<node::Type>();
 
     return std::make_shared<node::Decl>(vec, type, pos);
 }
@@ -243,12 +243,12 @@ node::NodePtr Parser::decl_exprssion(bool needType)
  * | string
  * | array
  * | hash
- * | paren_exprssion
+ * | paren_expression
  */
 
-node::NodePtr Parser::primary_exprssion()
+node::NodePtr Parser::primary_expression()
 {
-    debug("primary_exprssion");
+    debug("primary_expression");
     node::NodePtr ret = nullptr;
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wswitch"
@@ -277,9 +277,9 @@ node::NodePtr Parser::primary_exprssion()
             ret = std::make_shared<node::String>(std::get<std::string>(lexer->getToken().value), lexer->getPos());
             break;
         case TokenType::LBrack:
-            return array_exprssion();
+            return array_expression();
         case TokenType::LBrace:
-            return hash_exprssion();
+            return hash_expression();
     }
 #pragma clang diagnostic pop
     if (ret)
@@ -287,21 +287,21 @@ node::NodePtr Parser::primary_exprssion()
         lexer->getNextToken();
         return ret;
     }
-    return paren_exprssion();
+    return paren_expression();
 }
 
 /*
- *   call_expr
+ *   call_expression
  * | call_expr '++'
- * | call_exprssion '--'
+ * | call_expression '--'
  */
 
-node::NodePtr Parser::postfix_exprssion()
+node::NodePtr Parser::postfix_expression()
 {
     node::NodePtr node;
     auto pos = lexer->getPos();
-    debug("postfix_exprssion");
-    if ((node = call_exprssion(nullptr)) == nullptr) return nullptr;
+    debug("postfix_expression");
+    if ((node = call_expression(nullptr)) == nullptr) return nullptr;
     if (lexer->isType(TokenType::OpIncr) || lexer->isType(TokenType::OpDecr))
     {
         node = std::make_shared<node::UnaryOp>(lexer->getToken().type, node, true, pos);
@@ -312,20 +312,21 @@ node::NodePtr Parser::postfix_exprssion()
 }
 
 /*
- *   '++' unary_expr
- * | '--' unary_expr
- * | '~' unary_expr
- * | '!' unary_expr
- * | '+' unary_expr
- * | '-' unary_expr
- * | '&' unary_expr
- * | '*' unary_exprssion
- * | postfix_exprssion
+ *   '++' unary_expression
+ * | '--' unary_expression
+ * | '~' unary_expression
+ * | '!' unary_expression
+ * | '+' unary_expression
+ * | '-' unary_expression
+ * | '&' unary_expression
+ * | '*' unary_expression
+ * | 'sizeof' '(' unary_expression ')'
+ * | postfix_expression
  */
 
-node::NodePtr Parser::unary_exprssion()
+node::NodePtr Parser::unary_expression()
 {
-    debug("unary_exprssion");
+    debug("unary_expression");
     auto pos = lexer->getPos();
     if (lexer->isType(TokenType::OpIncr) || lexer->isType(TokenType::OpDecr)
         || lexer->isType(TokenType::OpBitNot) || lexer->isType(TokenType::OpNot)
@@ -335,29 +336,37 @@ node::NodePtr Parser::unary_exprssion()
         TokenType op = lexer->getToken().type;
 
         lexer->getNextToken();
-        return std::make_shared<node::UnaryOp>(op, unary_exprssion(), false, pos);
+        return std::make_shared<node::UnaryOp>(op, unary_expression(), false, pos);
     }
-    return postfix_exprssion();
+    else if (accept(TokenType::SizeOf))
+    {
+        expectNext(TokenType::LParen, "type missing closing '('");
+        auto expr = std::make_shared<node::UnaryOp>(TokenType::SizeOf, unary_expression(), false, pos);
+        expectNext(TokenType::RParen, "type missing closing ')'");
+        return expr;
+
+    }
+    return postfix_expression();
 }
 
 /*
- * unary_expr (('* | '/' | '%') unary_exprssion)*
+ * unary_expr (('* | '/' | '%') unary_expression)*
  */
 
-node::NodePtr Parser::multiplicative_exprssion()
+node::NodePtr Parser::multiplicative_expression()
 {
     TokenType op;
     node::NodePtr node, right;
     auto pos = lexer->getPos();
-    debug("multiplicative_exprssion");
-    if ((node = unary_exprssion()) == nullptr) return nullptr;
+    debug("multiplicative_expression");
+    if ((node = unary_expression()) == nullptr) return nullptr;
     while (lexer->isType(TokenType::OpMul) || lexer->isType(TokenType::OpDiv) || lexer->isType(TokenType::OpMod))
     {
         op = lexer->getToken().type;
 
         lexer->getNextToken();
         ctx = "multiplicative operation expression";
-        right = expect(unary_exprssion(), "missing right-hand expression");
+        right = expect(unary_expression(), "missing right-hand expression");
 
         node = std::make_shared<node::BinaryOp>(op, node, right, pos);
     }
@@ -365,23 +374,23 @@ node::NodePtr Parser::multiplicative_exprssion()
 }
 
 /*
- * multiplicative_expr (('+ | '-') multiplicative_exprssion)*
+ * multiplicative_expr (('+ | '-') multiplicative_expression)*
  */
 
-node::NodePtr Parser::additive_exprssion()
+node::NodePtr Parser::additive_expression()
 {
     TokenType op;
     node::NodePtr node, right;
     auto pos = lexer->getPos();
-    debug("additive_exprssion");
-    if ((node = multiplicative_exprssion()) == nullptr) return nullptr;
+    debug("additive_expression");
+    if ((node = multiplicative_expression()) == nullptr) return nullptr;
     while (lexer->isType(TokenType::OpPlus) || lexer->isType(TokenType::OpMinus))
     {
         op = lexer->getToken().type;
 
         lexer->getNextToken();
         ctx = "additive operation expression";
-        right = expect(multiplicative_exprssion(), "missing right-hand expression");
+        right = expect(multiplicative_expression(), "missing right-hand expression");
 
         node = std::make_shared<node::BinaryOp>(op, node, right, pos);
     }
@@ -389,23 +398,23 @@ node::NodePtr Parser::additive_exprssion()
 }
 
 /*
- * additive_expr (('<<' | '>>') additive_exprssion)*
+ * additive_expr (('<<' | '>>') additive_expression)*
  */
 
-node::NodePtr Parser::shift_exprssion()
+node::NodePtr Parser::shift_expression()
 {
     TokenType op;
     node::NodePtr node, right;
     auto pos = lexer->getPos();
-    debug("shift_exprssion");
-    if ((node = additive_exprssion()) == nullptr) return nullptr;
+    debug("shift_expression");
+    if ((node = additive_expression()) == nullptr) return nullptr;
     while (lexer->isType(TokenType::OpBitShL) || lexer->isType(TokenType::OpBitShR))
     {
         op = lexer->getToken().type;
 
         lexer->getNextToken();
         ctx = "shift operation expression";
-        right = expect(additive_exprssion(), "missing right-hand expression");
+        right = expect(additive_expression(), "missing right-hand expression");
 
         node = std::make_shared<node::BinaryOp>(op, node, right, pos);
     }
@@ -413,23 +422,23 @@ node::NodePtr Parser::shift_exprssion()
 }
 
 /*
- * shift_expr (('<' | '<=' | '>' | '>=') shift_exprssion)*
+ * shift_expr (('<' | '<=' | '>' | '>=') shift_expression)*
  */
 
-node::NodePtr Parser::relational_exprssion()
+node::NodePtr Parser::relational_expression()
 {
     TokenType op;
     node::NodePtr node, right;
     auto pos = lexer->getPos();
-    debug("relational_exprssion");
-    if ((node = shift_exprssion()) == nullptr) return nullptr;
+    debug("relational_expression");
+    if ((node = shift_expression()) == nullptr) return nullptr;
     while(lexer->isRelational())
     {
         op = lexer->getToken().type;
 
         lexer->getNextToken();
         ctx = "relational operation expression";
-        right = expect(shift_exprssion(), "missing right-hand expression");
+        right = expect(shift_expression(), "missing right-hand expression");
 
         node = std::make_shared<node::BinaryOp>(op, node, right, pos);
     }
@@ -437,23 +446,23 @@ node::NodePtr Parser::relational_exprssion()
 }
 
 /*
- * relational_expr (('==' | '!=') relational_exprssion)*
+ * relational_expr (('==' | '!=') relational_expression)*
  */
 
-node::NodePtr Parser::equality_exprssion()
+node::NodePtr Parser::equality_expression()
 {
     TokenType op;
     node::NodePtr node, right;
     auto pos = lexer->getPos();
-    debug("equality_exprssion");
-    if ((node = relational_exprssion()) == nullptr) return nullptr;
+    debug("equality_expression");
+    if ((node = relational_expression()) == nullptr) return nullptr;
     while (lexer->isEquality())
     {
         op = lexer->getToken().type;
 
         lexer->getNextToken();
         ctx = "equality operation expression";
-        right = expect(relational_exprssion(), "missing right-hand expression");
+        right = expect(relational_expression(), "missing right-hand expression");
 
         node = std::make_shared<node::BinaryOp>(op, node, right, pos);
     }
@@ -461,19 +470,19 @@ node::NodePtr Parser::equality_exprssion()
 }
 
 /*
- * equality_expr ('and' equality_exprssion)*
+ * equality_expr ('and' equality_expression)*
  */
 
-node::NodePtr Parser::bitwise_and_exprssion()
+node::NodePtr Parser::bitwise_and_expression()
 {
     node::NodePtr node, right;
-    debug("bitwise_and_exprssion");
+    debug("bitwise_and_expression");
     auto pos = lexer->getPos();
-    if ((node = equality_exprssion()) == nullptr) return nullptr;
+    if ((node = equality_expression()) == nullptr) return nullptr;
     while (accept(TokenType::OpBitAnd))
     {
         ctx = "& operation expression";
-        right = expect(equality_exprssion(), "missing right-hand expression");
+        right = expect(equality_expression(), "missing right-hand expression");
 
         node = std::make_shared<node::BinaryOp>(TokenType::OpBitAnd, node, right, pos);
     }
@@ -481,19 +490,19 @@ node::NodePtr Parser::bitwise_and_exprssion()
 }
 
 /*
- * bitwise_and_expr ('^' bitwise_and_exprssion)*
+ * bitwise_and_expr ('^' bitwise_and_expression)*
  */
 
-node::NodePtr Parser::bitwise_xor_exprssion()
+node::NodePtr Parser::bitwise_xor_expression()
 {
     node::NodePtr node, right;
-    debug("bitwise_xor_exprssion");
+    debug("bitwise_xor_expression");
     auto pos = lexer->getPos();
-    if ((node = bitwise_and_exprssion()) == nullptr) return nullptr;
+    if ((node = bitwise_and_expression()) == nullptr) return nullptr;
     while (accept(TokenType::OpBitXor))
     {
         ctx = "^ operation expression";
-        right = expect(bitwise_and_exprssion(), "missing right-hand expression");
+        right = expect(bitwise_and_expression(), "missing right-hand expression");
 
         node = std::make_shared<node::BinaryOp>(TokenType::OpBitXor, node, right, pos);
     }
@@ -501,19 +510,19 @@ node::NodePtr Parser::bitwise_xor_exprssion()
 }
 
 /*
- * bitwise_xor_expr ('|' bitwise_xor_exprssion)*
+ * bitwise_xor_expr ('|' bitwise_xor_expression)*
  */
 
-node::NodePtr Parser::bitswise_or_exprssion()
+node::NodePtr Parser::bitswise_or_expression()
 {
     node::NodePtr node, right;
-    debug("bitswise_or_exprssion");
+    debug("bitswise_or_expression");
     auto pos = lexer->getPos();
-    if ((node = bitwise_xor_exprssion()) == nullptr) return nullptr;
+    if ((node = bitwise_xor_expression()) == nullptr) return nullptr;
     while (accept(TokenType::OpBitOr))
     {
         ctx = "| operation expression";
-        right = expect(bitwise_xor_exprssion(), "missing right-hand expression");
+        right = expect(bitwise_xor_expression(), "missing right-hand expression");
 
         node = std::make_shared<node::BinaryOp>(TokenType::OpBitOr, node, right, pos);
     }
@@ -521,19 +530,19 @@ node::NodePtr Parser::bitswise_or_exprssion()
 }
 
 /*
- * bitswise_or_expr ('&&' bitswise_or_exprssion)*
+ * bitswise_or_expr ('&&' bitswise_or_expression)*
  */
 
-node::NodePtr Parser::logical_and_exprssion()
+node::NodePtr Parser::logical_and_expression()
 {
     node::NodePtr node, right;
-    debug("logical_and_exprssion");
+    debug("logical_and_expression");
     auto pos = lexer->getPos();
-    if ((node = bitswise_or_exprssion()) == nullptr) return nullptr;
+    if ((node = bitswise_or_expression()) == nullptr) return nullptr;
     while (accept(TokenType::OpAnd))
     {
         ctx = "&& operation expression";
-        right = expect(bitswise_or_exprssion(), "missing right-hand expression");
+        right = expect(bitswise_or_expression(), "missing right-hand expression");
 
         node = std::make_shared<node::BinaryOp>(TokenType::OpAnd, node, right, pos);
     }
@@ -541,21 +550,21 @@ node::NodePtr Parser::logical_and_exprssion()
 }
 
 /*
- * logical_and_expr ('||' logical_and_exprssion)*
+ * logical_and_expr ('||' logical_and_expression)*
  */
 
-node::NodePtr Parser::logical_or_exprssion()
+node::NodePtr Parser::logical_or_expression()
 {
     node::NodePtr node, right;
     auto pos = lexer->getPos();
-    debug("logical_or_exprssion");
-    if ((node = logical_and_exprssion()) == nullptr) return nullptr;
+    debug("logical_or_expression");
+    if ((node = logical_and_expression()) == nullptr) return nullptr;
 
     // '||'
     while (accept(TokenType::OpOr))
     {
         ctx = "|| operation expression";
-        right = expect(logical_and_exprssion(), "missing right-hand expression");
+        right = expect(logical_and_expression(), "missing right-hand expression");
 
         node = std::make_shared<node::BinaryOp>(TokenType::OpOr, node, right, pos);
     }
@@ -564,7 +573,7 @@ node::NodePtr Parser::logical_or_exprssion()
 }
 
 /*
- * (decl_expr ('=' expr)? (',' decl_exprssion ('=' expression)?)*)
+ * (decl_expr ('=' expr)? (',' decl_expression ('=' expression)?)*)
  */
 
 std::vector<node::NodePtr> Parser::function_params()
@@ -579,7 +588,7 @@ std::vector<node::NodePtr> Parser::function_params()
     {
         auto pos = lexer->getPos();
         node::DeclPtr decl;
-        if (auto expr = decl_exprssion(false); expr)
+        if (auto expr = decl_expression(false); expr)
             decl = expr->as<node::Decl>();
         else if (lexer->isType(TokenType::VaArg))
         {
@@ -612,21 +621,21 @@ std::vector<node::NodePtr> Parser::function_params()
 }
 
 /*
- *   primary_expr
+ *   primary_expression
  * | primary_expr '[' expression ']'
  * | primary_expr '.' id
- * | primary_exprssion '.' call_exprssion
+ * | primary_expression '.' call_expression
  */
 
-node::NodePtr Parser::slot_access_exprssion(node::NodePtr left)
+node::NodePtr Parser::slot_access_expression(node::NodePtr left)
 {
     auto pos = lexer->getPos();
-    debug("slot_access_exprssion");
+    debug("slot_access_expression");
 
-    // primary_exprssion
+    // primary_expression
     if (!left)
     {
-        left = primary_exprssion();
+        left = primary_expression();
         if (!left) return nullptr;
     }
 
@@ -643,7 +652,7 @@ node::NodePtr Parser::slot_access_exprssion(node::NodePtr left)
                 left,
                 right,
                 pos);
-        return call_exprssion(c);
+        return call_expression(c);
     }
 
     // slot
@@ -661,7 +670,7 @@ node::NodePtr Parser::slot_access_exprssion(node::NodePtr left)
             std::vector<node::NodePtr> args_vec;
             node::NodePtr prev;
 
-            auto call = std::static_pointer_cast<node::Call>(call_exprssion(id));
+            auto call = std::static_pointer_cast<node::Call>(call_expression(id));
             if (!call->args->vec.empty())
             {
                 // re-organize call arguments
@@ -686,7 +695,7 @@ node::NodePtr Parser::slot_access_exprssion(node::NodePtr left)
         else
             left = std::make_shared<node::Slot>(left, id, pos);
 
-        left = call_exprssion(left);
+        left = call_expression(left);
     }
 
     return left;
@@ -737,21 +746,21 @@ node::ArgsPtr Parser::call_args()
 
 /*
  *   slot_access_expr '(' args? ')'
- * | slot_access_exprssion
+ * | slot_access_expression
  */
 
-node::NodePtr Parser::call_exprssion(node::NodePtr left)
+node::NodePtr Parser::call_expression(node::NodePtr left)
 {
     //node::NodePtr right;
     node::NodePtr prev = left;
     node::CallPtr call = nullptr;
     auto pos = lexer->getPos();
-    debug("call_exprssion");
+    debug("call_expression");
 
-    // slot_access_exprssion
+    // slot_access_expression
     if (!left)
     {
-        if ((left = slot_access_exprssion(nullptr)) == nullptr) return nullptr;
+        if ((left = slot_access_expression(nullptr)) == nullptr) return nullptr;
     }
 
     // '('
@@ -775,19 +784,19 @@ node::NodePtr Parser::call_exprssion(node::NodePtr left)
     {
         // stop here if the there was a previous left-hand expression
         // and the current token is '.' because we're
-        // probably inside the loop in slot_access_exprssion
+        // probably inside the loop in slot_access_expression
         return left;
     }
     else if (lexer->isType(TokenType::LParen))
-        return call_exprssion(left);
-    return slot_access_exprssion(left);
+        return call_expression(left);
+    return slot_access_expression(left);
 }
 
 /*
- * ('let' | 'const') decl_expr ('=' expression)? (',' decl_exprssion ('=' expr)?)*
+ * ('let' | 'const') decl_expr ('=' expression)? (',' decl_expression ('=' expr)?)*
  */
 
-node::NodePtr Parser::variable_exprssion(const TokenType &tokenType)
+node::NodePtr Parser::variable_expression(const TokenType &tokenType)
 {
     // let already consumed
     std::vector<node::BinaryOpPtr> vec;
@@ -802,7 +811,7 @@ node::NodePtr Parser::variable_exprssion(const TokenType &tokenType)
 
         auto pos = lexer->getPos();
         bool needType = true; // todo: inference type by value
-        node::NodePtr decl = expect(decl_exprssion(needType), "expecting declaration");
+        node::NodePtr decl = expect(decl_expression(needType), "expecting declaration");
         node::NodePtr val = nullptr;
 
         // '='
@@ -820,28 +829,28 @@ node::NodePtr Parser::variable_exprssion(const TokenType &tokenType)
 }
 
 /*
- *   logical_or_exprssion
- * | variable_exprssion
- * | call_expr '=' not_expr
- * | call_expr '+=' not_expr
- * | call_expr '-=' not_expr
- * | call_expr '/=' not_expr
- * | call_expr '*=' not_expr
- * | call_exprssion '|=' not_expr
- * | call_expr '&=' not_exprssion
+ *   logical_or_expression
+ * | variable_expression
+ * | call_expr '=' not_expression
+ * | call_expr '+=' not_expression
+ * | call_expr '-=' not_expression
+ * | call_expr '/=' not_expression
+ * | call_expr '*=' not_expression
+ * | call_expression '|=' not_expression
+ * | call_expr '&=' not_expression
  */
 
-node::NodePtr Parser::assignment_exprssion()
+node::NodePtr Parser::assignment_expression()
 {
     node::NodePtr node, right;
     auto pos = lexer->getPos();
 
     TokenType curTokType = lexer->getToken().type;
-    // variable_exprssion?
-    if (accept(TokenType::Let) || accept(TokenType::Const)) return variable_exprssion(curTokType);
+    // variable_expression?
+    if (accept(TokenType::Let) || accept(TokenType::Const)) return variable_expression(curTokType);
 
-    debug("assignment_exprssion");
-    if ((node = logical_or_exprssion()) == nullptr) return nullptr;
+    debug("assignment_expression");
+    if ((node = logical_or_expression()) == nullptr) return nullptr;
 
     // =
     if (lexer->isType(TokenType::OpAssign))
@@ -850,7 +859,7 @@ node::NodePtr Parser::assignment_exprssion()
 
         lexer->getNextToken();
         ctx = "assignment expression";
-        if ((right = not_exprssion()) == nullptr) return nullptr;
+        if ((right = not_expression()) == nullptr) return nullptr;
         return std::make_shared<node::BinaryOp>(op, node, right, pos);
     }
 
@@ -866,7 +875,7 @@ node::NodePtr Parser::assignment_exprssion()
 
         lexer->getNextToken();
         ctx = "compound assignment expression";
-        if ((right = not_exprssion()) == nullptr) return nullptr;
+        if ((right = not_expression()) == nullptr) return nullptr;
         return std::make_shared<node::BinaryOp>(op, node, right, pos);
     }
 
@@ -874,37 +883,37 @@ node::NodePtr Parser::assignment_exprssion()
 }
 
 /*
- *   'not' not_exprssion
- * | assignment_exprssion
+ *   'not' not_expression
+ * | assignment_expression
  */
 
-node::NodePtr Parser::not_exprssion()
+node::NodePtr Parser::not_expression()
 {
     auto pos = lexer->getPos();
-    debug("not_exprssion");
+    debug("not_expression");
     if (accept(TokenType::OpLNot))
     {
         node::NodePtr expr;
-        if ((expr = not_exprssion()) == nullptr) return nullptr;
+        if ((expr = not_expression()) == nullptr) return nullptr;
         return std::make_shared<node::UnaryOp>(TokenType::OpLNot, expr, 0, pos);
     }
-    return assignment_exprssion();
+    return assignment_expression();
 }
 
 /*
- *  not_exprssion
+ *  not_expression
  */
 
 node::NodePtr Parser::expression()
 {
     node::NodePtr node;
     debug("expression");
-    if ((node = not_exprssion()) == nullptr) return nullptr;
+    if ((node = not_expression()) == nullptr) return nullptr;
     return node;
 }
 
 /*
- * 'type' id decl_exprssion* end
+ * 'type' id decl_expression* end
  */
 
 node::NodePtr Parser::struct_statement()
@@ -930,7 +939,7 @@ node::NodePtr Parser::struct_statement()
     // type fields
     do
     {
-        node::NodePtr decl = expect(decl_exprssion(true), "expecting field");
+        node::NodePtr decl = expect(decl_expression(true), "expecting field");
 
         // semicolon might have been inserted here
         accept(TokenType::Semicolon);
@@ -942,7 +951,7 @@ node::NodePtr Parser::struct_statement()
 }
 
 /*
- * 'def' id '(' args? ')' (':' type_exprssion)? block
+ * 'def' id '(' args? ')' (':' type_expression)? block
  */
 
 node::NodePtr Parser::function_statement()
@@ -976,9 +985,9 @@ node::NodePtr Parser::function_statement()
 
     ctx = "function statement";
 
-    // (':' type_exprssion)?
+    // (':' type_expression)?
     if (accept(TokenType::Colon))
-        type = expect(type_exprssion(), "missing type after ':'")->as<node::Type>();
+        type = expect(type_expression(), "missing type after ':'")->as<node::Type>();
     else
         type = std::make_shared<node::Type>("void", false, lexer->getPos()); // default void
 
@@ -1125,7 +1134,7 @@ node::NodePtr Parser::repeat_statement()
 
 
 /*
- * 'for' variable_exprssion ; expr ; expression ; block
+ * 'for' variable_expression ; expr ; expression ; block
  */
 
 node::NodePtr Parser::for_statement()
@@ -1140,7 +1149,7 @@ node::NodePtr Parser::for_statement()
     node::NodePtr step = nullptr;
     node::BlockPtr body = nullptr;
 
-    // variable_exprssion
+    // variable_expression
     ctx = "for statement begin";
     if ((beg = expression()) == nullptr) return nullptr;
     expectNext(TokenType::Semicolon, "expecting semicolon");
@@ -1259,7 +1268,7 @@ node::NodePtr Parser::use_statement()
 }
 
 /*
- * 'extern' id '(' args? ')' (':' type_exprssion)?
+ * 'extern' id '(' args? ')' (':' type_expression)?
  */
 
 node::NodePtr Parser::extern_statement()
@@ -1291,9 +1300,9 @@ node::NodePtr Parser::extern_statement()
 
     ctx = "extern statement";
 
-    // (':' type_exprssion)?
+    // (':' type_expression)?
     if (accept(TokenType::Colon))
-        type = expect(type_exprssion(), "missing type after ':'")->as<node::Type>();
+        type = expect(type_expression(), "missing type after ':'")->as<node::Type>();
     else
         type = std::make_shared<node::Type>("void", false, lexer->getPos()); // default void
 

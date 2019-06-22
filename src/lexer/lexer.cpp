@@ -79,6 +79,7 @@ namespace shine
                 }
                 break;
             case 6:
+                if (buf == "sizeof") return token(SizeOf);
                 if (buf == "struct") return token(Struct);
                 if (buf == "return") return token(Return);
                 if (buf == "repeat") return token(Repeat);

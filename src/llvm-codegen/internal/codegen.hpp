@@ -127,6 +127,7 @@ namespace shine
 
         llvm::Value *createCondition(const node::NodePtr &node, const node::NodePtr &expr, const std::string &conditionName = "");
 
+        uint64_t sizeOf(const node::NodePtr &node);
         void registerBuiltinNumericTypes();
         void registerType(const std::string &typeName, llvm::Type *type);
         llvm::Type *getRegisteredType(const std::string &typeName, bool getPtrType);

@@ -244,6 +244,31 @@ bool LLVMCodegenImpl::isBlockContainsJumpCond(const node::BlockPtr &block)
     }) != stmts.end();
 }
 
+uint64_t LLVMCodegenImpl::sizeOf(const node::NodePtr &node)
+{
+    const auto &dataLayout = llvmctx->module->getDataLayout();
+    if (node->is(NodeType::Id))
+    {
+        visit(node);
+        auto value = popValue();
+        if (value.isType)
+            return dataLayout.getTypeStoreSize(value.type);
+        else
+        {
+            auto type = value.value->getType();
+            if (type->isPointerTy())
+                return dataLayout.getTypeAllocSize(type->getPointerElementType());
+        }
+    }
+    else if (node->is(NodeType::UnaryOp))
+    {
+        if (auto t = node->as<node::UnaryOp>(); t->op == TokenType::OpMul)
+            return dataLayout.getPointerSize();
+    }
+
+    throw ShineException(filename, node->pos, "Cannot get size of node: " + node->getNodeName());
+}
+
 
 void LLVMCodegenImpl::visit_block(const node::BlockPtr &node)
 {
@@ -257,7 +282,9 @@ void LLVMCodegenImpl::visit_block(const node::BlockPtr &node)
 
 void LLVMCodegenImpl::visit_id(const node::IdPtr &node)
 {
-    if (auto val = namedVariables.findNamedVariable(node->val); val != nullptr)
+    if (auto it = registeredTypes.find(node->val); it != registeredTypes.end())
+        pushValue(it->second);
+    else if (auto val = namedVariables.findNamedVariable(node->val); val != nullptr)
         pushValue(*val);
     else if (auto it = functions.find(node->val); it != functions.end())
         pushValue(it->second.value);
@@ -362,9 +389,19 @@ void LLVMCodegenImpl::visit_call(const node::CallPtr &node)
 
 void LLVMCodegenImpl::visit_unary_op(const node::UnaryOpPtr &node)
 {
+    LLVMValue result {};
+    if (node->op == TokenType::SizeOf)
+    {
+        auto sz = sizeOf(node->expr);
+        result.value = builder->getInt64(sz);
+        result.sign = false;
+        pushValue(result);
+        return;
+    }
+
     visit(node->expr);
     LLVMValue value = popValue();
-    LLVMValue result {};
+
     if (isa<Constant>(value.value))
     {
         result.sign = value.sign;

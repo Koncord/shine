@@ -45,6 +45,7 @@ namespace shine
   t(Repeat, "repeat") \
   t(Case, "case") \
   t(When, "when") \
+  t(SizeOf, "sizeof") \
   t(LBrace, "{") \
   t(RBrace, "}") \
   t(LParen, "(") \

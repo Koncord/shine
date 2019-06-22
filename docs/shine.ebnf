@@ -87,6 +87,7 @@ unary_expression = "++" unary_expression
                  | "+" unary_expression
                  | "-" unary_expression
                  | "!" unary_expression
+                 | "sizeof" "(" unary_expression ")"
                  | postfix_expression ;
 
 postfix_expression = call_expression
