@@ -1,17 +1,19 @@
 #include "shine.hpp"
+
+#include <string>
+#include <cstring>
+#include <stdexcept>
+#include <fstream>
+#include <iostream>
+#include <unistd.h>
+
+#include <llvm/Support/CommandLine.h>
+
+#include <llvm-codegen/codegen.hpp>
 #include <lexer/lexer.hpp>
 #include <utils/prettyprint.hpp>
 #include <utils/utils.hpp>
 #include <ast/parser.hpp>
-
-#include <string>
-#include <stdexcept>
-#include <cstring>
-#include <unistd.h>
-
-#include <tclap/CmdLine.h>
-#include <llvm-codegen/codegen.hpp>
-#include <fstream>
 
 static bool ast = false;
 static bool tokens = false;
@@ -20,11 +22,6 @@ static bool genIR = false;
 static int optLevel = 0;
 static std::string outFile;
 std::vector<std::string> sources;
-
-/*
- * Evaluate `source` with the given
- * `path` name and return status.
- */
 
 void eval(std::vector<char> &source, const std::string &path)
 {
@@ -63,10 +60,10 @@ void eval(std::vector<char> &source, const std::string &path)
     {
         std::string outfile;
 
-        if(outFile.empty())
+        if (outFile.empty())
             outfile = std::string(
                     infile.begin(),
-                            std::find_if(infile.rbegin(), infile.rend(), [](char ch) { return ch == '.'; }).base()
+                    std::find_if(infile.rbegin(), infile.rend(), [](char ch) { return ch == '.'; }).base()
             );
 
 
@@ -118,24 +115,48 @@ void setupConsole() {}
 
 #endif
 
-
 void parseArgs(int argc, const char **argv)
 {
-    TCLAP::CmdLine cmdLine("", ' ', SHINE_VERSION);
-    TCLAP::SwitchArg printAst("A", "ast", "Output ast to stdout", cmdLine, false);
-    TCLAP::SwitchArg printTokens("T", "tokens", "Output tokens to stdout", cmdLine, false);
-    TCLAP::UnlabeledMultiArg<std::string> sourceFiles("files", "Source files", true, "file", cmdLine);
-    TCLAP::SwitchArg execute("E", "execute", "Execute program", cmdLine, false);
-    TCLAP::SwitchArg genIR("S", "asm", "Stop after generating IR code", cmdLine, false);
-    TCLAP::ValueArg<std::string> outFile("o", "out", "Out file", false, "", "file", cmdLine);
-    std::vector<int> allowed;
-    for(int i = 0; i < 4; ++i)
-        allowed.push_back(i);
-    TCLAP::ValuesConstraint<int> constraint(allowed);
-    TCLAP::ValueArg<int> oLevel("O", "opt", "Optimize IR code level", false, 2, &constraint, cmdLine);
+    using namespace llvm;
 
-    cmdLine.parse(argc, argv);
-    sources = sourceFiles.getValue();
+    cl::SetVersionPrinter([](raw_ostream &stream) {
+        stream << "Shine version " << SHINE_VERSION << "\n\n";
+        cl::PrintVersionMessage();
+    });
+
+    cl::OptionCategory compilerCategory("Compiler Options", "Options for controlling the compilation process.");
+
+    cl::list<std::string> inputs(cl::Positional, cl::Required, cl::desc("<input file>"), cl::cat(compilerCategory));
+
+    cl::opt<std::string> outFile("o", cl::desc("Out file"), cl::value_desc("string"), cl::cat(compilerCategory));
+
+    cl::opt<bool> printAst("ast", cl::desc("Output ast to stdout"), cl::cat(compilerCategory));
+    cl::alias printAst2("A", cl::desc("Alias for -ast"), cl::aliasopt(printAst), cl::cat(compilerCategory));
+
+    cl::opt<bool> printTokens("tokens", cl::desc("Output tokens to stdout"), cl::cat(compilerCategory));
+    cl::alias printTokens2("T", cl::desc("Alias for -tokens"), cl::aliasopt(printTokens), cl::cat(compilerCategory));
+
+    cl::opt<bool> execute("execute", cl::desc("Execute program"), cl::cat(compilerCategory));
+    cl::alias execute2("E", cl::desc("Alias for -execute"), cl::aliasopt(execute), cl::cat(compilerCategory));
+
+    cl::opt<bool> genIR("asm", cl::desc("Stop after generating IR code"), cl::cat(compilerCategory));
+    cl::alias genIR2("S", cl::desc("Alias for -asm"), cl::aliasopt(genIR), cl::cat(compilerCategory));
+
+    enum OptLevel
+    {
+        O0, O1, O2, O3
+    };
+
+    cl::opt<OptLevel> oLevel(cl::desc("Optimization level:"),
+                             cl::values(
+                                     clEnumVal(O0, "No optimizations, enable debugging"),
+                                     clEnumVal(O1, "Enable trivial optimizations"),
+                                     clEnumVal(O2, "Enable default optimizations"),
+                                     clEnumVal(O3, "Enable expensive optimizations")),
+                             cl::cat(compilerCategory));
+
+    cl::ParseCommandLineOptions(argc, argv);
+    sources = inputs;
     tokens = printTokens.getValue();
     ast = printAst.getValue();
     exec = execute.getValue();
@@ -152,7 +173,7 @@ int main(int argc, const char **argv)
 
 //    try
 //    {
-        parseFiles();
+    parseFiles();
 //    }
 //    catch (std::exception &e)
 //    {

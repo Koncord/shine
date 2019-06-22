@@ -18,7 +18,6 @@
  
     C++ compiler with support C++17
     LLVM and LLVM-dev
-    TCLAP
     CMake
     
  After installing all dependencies, simple run:
