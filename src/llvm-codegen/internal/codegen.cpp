@@ -973,3 +973,8 @@ void LLVMCodegenImpl::visit_use(const node::UsePtr &node)
 {
     throw UnhandledNode(filename, node);
 }
+
+void LLVMCodegenImpl::visit_module(const node::ModulePtr &node)
+{
+    throw UnhandledNode(filename, node);
+}

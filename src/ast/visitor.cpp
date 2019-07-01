@@ -99,7 +99,9 @@ namespace shine
             case NodeType::Case:
                 visit_case(node->as<node::Case>());
                 break;
-
+            case NodeType::Module:
+                visit_module(node->as<node::Module>());
+                break;
             default:
                 throw UnhandledNode(filename, node);
         }

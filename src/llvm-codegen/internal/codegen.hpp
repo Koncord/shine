@@ -166,6 +166,7 @@ namespace shine
         void visit_struct(const node::StructPtr &node) override;
         void visit_vaarg(const node::VaArgPtr &node) override;
         void visit_case(const node::CasePtr &node) override;
+        void visit_module(const node::ModulePtr &node) override;
     };
 }
 

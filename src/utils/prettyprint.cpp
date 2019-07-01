@@ -229,7 +229,10 @@ namespace
 
         void visit_function(const node::FunctionPtr &node) override
         {
-            print_func("(function %s -> ", node->name.c_str());
+            std::string ns;
+            for(const auto &n : node->_namespace)
+                ns += n + "::";
+            print_func("(%sfunction %s%s -> ", node->isPublic ? "public " : "", ns.c_str(), node->name.c_str());
             ++indents;
 
             if (node->type)
@@ -502,7 +505,10 @@ namespace
 
         void visit_extern(const node::ExternPtr &node) override
         {
-            print_func("(extern %s -> ", node->name.c_str());
+            std::string ns;
+            for(const auto &n : node->_namespace)
+                ns += n + "::";
+            print_func("(%sextern %s%s -> ", node->isPublic ? "public " : "", ns.c_str(), node->name.c_str());
             ++indents;
 
             if (node->type)
@@ -532,6 +538,20 @@ namespace
         void visit_vaarg(const node::VaArgPtr &node) override
         {
             print_func("(vaarg)");
+        }
+
+        void visit_module(const node::ModulePtr &node) override
+        {
+            print_func("(module %s", node->name.c_str());
+            ++indents;
+            for (const auto &field : node->funcs)
+            {
+                print_func("\n");
+                indent();
+                visit(field);
+            }
+            --indents;
+            print_func(")");
         }
 
     public:

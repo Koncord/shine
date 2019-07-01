@@ -42,5 +42,6 @@ namespace shine
         virtual void visit_struct(const node::StructPtr &node) = 0;
         virtual void visit_vaarg(const node::VaArgPtr &node) = 0;
         virtual void visit_case(const node::CasePtr &node) = 0;
+        virtual void visit_module(const node::ModulePtr &node) = 0;
     };
 }
