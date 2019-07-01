@@ -29,6 +29,8 @@ namespace shine
   t(Def, "def") \
   t(Struct, "struct") \
   t(Use, "use") \
+  t(Mod, "mod") \
+  t(Pub, "pub") \
   t(As, "as") \
   t(While, "while") \
   t(Until, "until") \
@@ -87,6 +89,7 @@ namespace shine
   t(OpBitNot, "~") \
   t(OpBitShL, "<<") \
   t(OpBitShR, ">>") \
+  t(OpModScope, "::") \
   t(Last, "")
 
     enum class TokenType

@@ -56,6 +56,8 @@ namespace shine
                 if (buf == "end") return token(End);
                 if (buf == "let") return token(Let);
                 if (buf == "not") return token(OpLNot);
+                if (buf == "mod") return  token(Mod);
+                if (buf == "pub") return  token(Pub);
                 break;
             case 4:
                 if (buf == "case") return token(Case);
@@ -316,6 +318,9 @@ namespace shine
             case '?':
                 return token(QMark);
             case ':':
+                if (next() == ':')
+                    return token(OpModScope);
+                undo();
                 return token(Colon);
             case '+':
                 switch (next())
