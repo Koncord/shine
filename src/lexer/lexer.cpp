@@ -415,7 +415,7 @@ namespace shine
                 return scan_string();
             case '\'':
             {
-                tok.value = (long) scan_char(next());
+                tok.value = (int64_t) scan_char(next());
                 next();
                 return token(I64);
             }
