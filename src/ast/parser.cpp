@@ -1360,6 +1360,33 @@ node::NodePtr Parser::case_statement()
     return std::make_shared<node::Case>(caseExpr, whenStmts, elseBlock, casePos);
 }
 
+node::NodePtr Parser::mod_statement()
+{
+    debug("mod_statement");
+    ctx = "module statement";
+    auto pos = lexer->getPos();
+    std::string name;
+    std::vector<node::NodePtr> stmts;
+
+    // 'type'
+    if (!accept(TokenType::Mod)) return nullptr;
+
+    // id
+    expect(TokenType::Id, "missing type name");
+
+    name = std::get<std::string>(lexer->getToken().value);
+    lexer->getNextToken();
+    // semicolon might have been inserted here
+    accept(TokenType::Semicolon);
+
+    do
+    {
+        stmts.emplace_back(expect(pub_modifier(), "expecting field"));
+        accept(TokenType::Semicolon);
+    } while (!accept(TokenType::End));
+
+    return std::make_shared<node::Module>(name, stmts, pos);
+}
 
 node::NodePtr Parser::pub_modifier()
 {
@@ -1384,6 +1411,7 @@ node::NodePtr Parser::pub_modifier()
  * | repeat_statement
  * | for_statement
  * | case_statement
+ * | mod_statement
  * | pub_modifier
  * | expression
  */
@@ -1404,6 +1432,7 @@ node::NodePtr Parser::statement()
     if (lexer->isType(TokenType::Repeat)) return repeat_statement();
     if (lexer->isType(TokenType::For)) return for_statement();
     if (lexer->isType(TokenType::Case)) return case_statement();
+    if (lexer->isType(TokenType::Mod)) return mod_statement();
     if (lexer->isType(TokenType::Pub)) return pub_modifier();
     return expression();
 }

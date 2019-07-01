@@ -46,7 +46,8 @@ namespace shine
   n(Extern) \
   n(Repeat) \
   n(Case) \
-  n(When)
+  n(When) \
+  n(Module)
 
     enum class NodeType
     {
@@ -365,6 +366,16 @@ namespace shine
 
             std::string name;
             std::vector<DeclPtr> fields;
+        };
+
+        struct Module : Node
+        {
+            Module(std::string name,  std::vector<NodePtr> funcs, Position pos) : Node(NodeType::Module, pos),
+                                                                                 name(std::move(name)),
+                                                                                 funcs(std::move(funcs)) {}
+
+            std::string name;
+            std::vector<NodePtr> funcs;
         };
 
         struct If : Node

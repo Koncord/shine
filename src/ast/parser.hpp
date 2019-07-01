@@ -48,6 +48,7 @@ namespace shine
         node::NodePtr use_statement();
         node::NodePtr continue_statement();
         node::NodePtr break_statement();
+        node::NodePtr mod_statement();
 
         node::NodePtr pub_modifier();
 
