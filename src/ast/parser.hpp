@@ -49,12 +49,15 @@ namespace shine
         node::NodePtr continue_statement();
         node::NodePtr break_statement();
 
+        node::NodePtr pub_modifier();
+
         node::BlockPtr block();
 
         bool arg_list(std::vector<node::NodePtr> &vals, TokenType delim);
         node::ArgsPtr call_args();
 
         bool hash_pairs(std::vector<node::HashPairPtr> &pairs, TokenType delim);
+        node::NodePtr function_proto(NodeType ntype, TokenType ttype);
         std::vector<node::NodePtr> function_params();
 
     public:

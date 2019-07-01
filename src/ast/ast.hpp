@@ -297,15 +297,21 @@ namespace shine
         {
             Proto(
                     NodeType typeNode,
+                    bool isPublic,
+                    std::vector<std::string> _namespace,
                     std::string name,
                     TypePtr type,
                     std::vector<NodePtr> params,
                     Position pos
             ) : Node(typeNode, pos),
+                _namespace(std::move(_namespace)),
                 name(std::move(name)),
+                isPublic(isPublic),
                 type(std::move(type)),
                 params(std::move(params)) {}
 
+            bool isPublic;
+            std::vector<std::string> _namespace;
             std::string name;
             TypePtr type = nullptr;
             std::vector<NodePtr> params;
@@ -314,13 +320,23 @@ namespace shine
         struct Function : Proto
         {
             Function(
+                    std::vector<std::string> _namespace,
                     std::string name,
+                    bool isPublic,
                     TypePtr type,
                     BlockPtr block,
                     std::vector<NodePtr> params,
                     Position pos
-            ) : Proto(NodeType::Function, std::move(name), std::move(type), std::move(params), pos),
+            ) : Proto(NodeType::Function,
+                      isPublic,
+                      std::move(_namespace),
+                      std::move(name),
+                      std::move(type),
+                      std::move(params),
+                      pos),
                 block(std::move(block)) {}
+
+            Function(Proto &proto, BlockPtr block): Proto(proto), block(std::move(block)) {}
 
             BlockPtr block;
         };
@@ -328,11 +344,19 @@ namespace shine
         struct Extern : Proto
         {
             Extern(
+                    std::vector<std::string> _namespace,
                     std::string name,
+                    bool isPublic,
                     TypePtr type,
                     std::vector<NodePtr> params,
                     Position pos
-            ) : Proto(NodeType::Extern, std::move(name), std::move(type), std::move(params), pos) {}
+            ) : Proto(NodeType::Extern,
+                      isPublic,
+                      std::move(_namespace),
+                      std::move(name),
+                      std::move(type),
+                      std::move(params),
+                      pos) {}
         };
 
         struct Struct : Node

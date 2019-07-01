@@ -957,47 +957,18 @@ node::NodePtr Parser::struct_statement()
 node::NodePtr Parser::function_statement()
 {
     node::BlockPtr body;
-    std::vector<node::NodePtr> params;
-    node::TypePtr type = nullptr;
-    auto pos = lexer->getPos();
     debug("function_statement");
     ctx = "function statement";
 
-    // 'def'
-    if (!accept(TokenType::Def)) return nullptr;
-
-    // id
-    expect(TokenType::Id, "missing function name");
-
-    std::string name = std::get<std::string>(lexer->getToken().value);
-
-    lexer->getNextToken();
-
-    // '('
-    if (accept(TokenType::LParen))
-    {
-        // params?
-        params = function_params();
-        // ')'
-        ctx = "function statement";
-        expectNext(TokenType::RParen, "missing closing ')'");
-    }
-
-    ctx = "function statement";
-
-    // (':' type_expression)?
-    if (accept(TokenType::Colon))
-        type = expect(type_expression(), "missing type after ':'")->as<node::Type>();
-    else
-        type = std::make_shared<node::Type>("void", false, lexer->getPos()); // default void
-
-    // semicolon might have been inserted here
-    accept(TokenType::Semicolon);
+    auto fnProto = expect(
+            function_proto(NodeType::Function, TokenType::Def),
+            "expected \"extern\" statement"
+    )->as<node::Proto>();
 
     // block
     if ((body = block()) == nullptr)
         return nullptr;
-    return std::make_shared<node::Function>(name, type, body, params, pos);
+    return std::make_shared<node::Function>(*fnProto.get(), body);
 }
 
 /*
@@ -1267,26 +1238,31 @@ node::NodePtr Parser::use_statement()
     return node;
 }
 
-/*
- * 'extern' id '(' args? ')' (':' type_expression)?
- */
-
-node::NodePtr Parser::extern_statement()
+node::NodePtr Parser::function_proto(NodeType ntype, TokenType ttype)
 {
     auto pos = lexer->getPos();
+    ctx = "proto statement";
     std::vector<node::NodePtr> params;
-    node::TypePtr type = nullptr;
-    debug("extern");
-    ctx = "extern statement";
+    node::TypePtr rtype = nullptr;
+    bool isPublic;
+    std::string name;
+    std::vector<std::string> nsArr;
 
-    if (!accept(TokenType::Extern)) return nullptr;
+    // 'pub'
+    isPublic = accept(TokenType::Pub);
+
+    if (!accept(ttype)) return nullptr;
 
     // id
-    expect(TokenType::Id, "missing function name");
 
-    std::string name = std::get<std::string>(lexer->getToken().value);
-
-    lexer->getNextToken();
+    do
+    {
+        expect(TokenType::Id, "missing function name");
+        nsArr.push_back(std::get<std::string>(lexer->getToken().value));
+        lexer->getNextToken();
+    } while (accept(TokenType::OpModScope));
+    name = nsArr.back();
+    nsArr.pop_back();
 
     // '('
     if (accept(TokenType::LParen))
@@ -1294,22 +1270,39 @@ node::NodePtr Parser::extern_statement()
         // params?
         params = function_params();
         // ')'
-        ctx = "extern statement";
+        ctx = "proto statement";
         expectNext(TokenType::RParen, "missing closing ')'");
     }
 
-    ctx = "extern statement";
+    ctx = "proto statement";
 
     // (':' type_expression)?
     if (accept(TokenType::Colon))
-        type = expect(type_expression(), "missing type after ':'")->as<node::Type>();
+        rtype = expect(type_expression(), "missing type after ':'")->as<node::Type>();
     else
-        type = std::make_shared<node::Type>("void", false, lexer->getPos()); // default void
+        rtype = std::make_shared<node::Type>("void", false, lexer->getPos()); // default void
 
     // semicolon might have been inserted here
     accept(TokenType::Semicolon);
 
-    return std::make_shared<node::Extern>(name, type, params, pos);
+    return std::make_shared<node::Proto>(ntype, isPublic, nsArr, name, rtype, params, pos);
+}
+
+/*
+ * 'extern' id '(' args? ')' (':' type_expression)?
+ */
+
+node::NodePtr Parser::extern_statement()
+{
+    debug("extern");
+    ctx = "extern statement";
+
+    auto proto = expect(
+            function_proto(NodeType::Extern, TokenType::Extern),
+            "expected \"extern\" statement"
+    );
+
+    return proto->as<node::Extern>();
 }
 
 /*
@@ -1367,6 +1360,19 @@ node::NodePtr Parser::case_statement()
     return std::make_shared<node::Case>(caseExpr, whenStmts, elseBlock, casePos);
 }
 
+
+node::NodePtr Parser::pub_modifier()
+{
+    bool isPublic = accept(TokenType::Pub);
+    node::NodePtr stmt = statement();
+    if (stmt == nullptr) return nullptr;
+    if (stmt->is(NodeType::Extern) || stmt->is(NodeType::Function))
+    {
+        stmt->as<node::Proto>()->isPublic = isPublic;
+    }
+    return stmt;
+}
+
 /*
  *   if_statement
  * | while_statement
@@ -1378,6 +1384,7 @@ node::NodePtr Parser::case_statement()
  * | repeat_statement
  * | for_statement
  * | case_statement
+ * | pub_modifier
  * | expression
  */
 
@@ -1397,6 +1404,7 @@ node::NodePtr Parser::statement()
     if (lexer->isType(TokenType::Repeat)) return repeat_statement();
     if (lexer->isType(TokenType::For)) return for_statement();
     if (lexer->isType(TokenType::Case)) return case_statement();
+    if (lexer->isType(TokenType::Pub)) return pub_modifier();
     return expression();
 }
 
