@@ -22,9 +22,7 @@ FILE(GLOB SRCSPP
 
 add_executable(shine ${SRCS} ${SRCSPP})
 
-message(STATUS "${LLVM_INCLUDE_DIRS}")
-message(STATUS "${LLVM_LIBRARIES}")
-target_link_libraries(shine ${LLVM_LIBRARIES})
+target_link_libraries(shine ${LLVM_LIBRARIES} ${LLVM_LDFLAGS})
 
 option(ENABLE_PVS_OPTION "Enable PVS Studio" FALSE)
 
