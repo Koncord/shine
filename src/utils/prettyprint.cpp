@@ -554,6 +554,20 @@ namespace
             print_func(")");
         }
 
+        void visit_scope(const node::ScopePtr &node) override
+        {
+            print_func("(scoped id ");
+
+            for(auto it = node->scope.begin(); it != node->scope.end(); ++it)
+            {
+                print_func("%s", it->c_str());
+                if (std::next(it) != std::end(node->scope))
+                    print_func("::");
+            }
+
+            print_func(")");
+        }
+
     public:
         explicit Printer(const node::NodePtr &node) { visit(node); };
     };

@@ -980,3 +980,8 @@ void LLVMCodegenImpl::visit_module(const node::ModulePtr &node)
 {
     throw UnhandledNode(filename, node);
 }
+
+void LLVMCodegenImpl::visit_scope(const node::ScopePtr &node)
+{
+    throw UnhandledNode(filename, node);
+}

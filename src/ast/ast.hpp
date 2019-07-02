@@ -47,7 +47,8 @@ namespace shine
   n(Repeat) \
   n(Case) \
   n(When) \
-  n(Module)
+  n(Module) \
+  n(Scope)
 
     enum class NodeType
     {
@@ -123,6 +124,14 @@ namespace shine
             NodePtr right;
         };
 
+        struct Scope : Node
+        {
+            Scope(std::vector<std::string> scope, Position pos)
+                    : Node(NodeType::Scope, pos),
+                      scope(std::move(scope)) {}
+
+            std::vector<std::string> scope;
+        };
 
         struct Slot : Node
         {

@@ -61,6 +61,8 @@ namespace shine
         node::NodePtr function_proto(NodeType ntype, TokenType ttype);
         std::vector<node::NodePtr> function_params();
 
+        node::IdPtr getId();
+
     public:
         Parser(Lexer *lex) : lexer(lex) {}
 

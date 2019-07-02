@@ -214,10 +214,7 @@ node::NodePtr Parser::decl_expression(bool needType)
     while (lexer->isType(TokenType::Id))
     {
         // id
-        auto id = std::make_shared<node::Id>(std::get<std::string>(lexer->getToken().value), lexer->getPos());
-        vec.emplace_back(id);
-
-        lexer->getNextToken();
+        vec.emplace_back(getId());
 
         // ','
         if (!accept(TokenType::Comma)) break;
@@ -292,7 +289,7 @@ node::NodePtr Parser::primary_expression()
 
 /*
  *   call_expression
- * | call_expr '++'
+ * | call_expression '++'
  * | call_expression '--'
  */
 
@@ -655,15 +652,25 @@ node::NodePtr Parser::slot_access_expression(node::NodePtr left)
         return call_expression(c);
     }
 
+    if (accept(TokenType::OpModScope))
+    {
+        ctx = "scope expression";
+        std::vector<std::string> scope;
+        scope.push_back(left->as<node::Id>()->val);
+        do
+        {
+            auto id = getId()->val;
+            scope.push_back(id);
+        } while (accept(TokenType::OpModScope));
+        left = std::make_shared<node::Scope>(scope, pos);
+    }
+
     // slot
     while (accept(TokenType::OpDot))
     {
         ctx = "slot access expression";
-        expect(TokenType::Id, "expecting identifier");
 
-        auto id = std::make_shared<node::Id>(std::get<std::string>(lexer->getToken().value).c_str(), lexer->getPos());
-
-        lexer->getNextToken();
+        auto id = getId();
 
         if (lexer->isType(TokenType::LParen))
         {
@@ -831,13 +838,13 @@ node::NodePtr Parser::variable_expression(const TokenType &tokenType)
 /*
  *   logical_or_expression
  * | variable_expression
- * | call_expr '=' not_expression
- * | call_expr '+=' not_expression
- * | call_expr '-=' not_expression
- * | call_expr '/=' not_expression
- * | call_expr '*=' not_expression
+ * | call_expression '=' not_expression
+ * | call_expression '+=' not_expression
+ * | call_expression '-=' not_expression
+ * | call_expression '/=' not_expression
+ * | call_expression '*=' not_expression
  * | call_expression '|=' not_expression
- * | call_expr '&=' not_expression
+ * | call_expression '&=' not_expression
  */
 
 node::NodePtr Parser::assignment_expression()
@@ -1488,4 +1495,12 @@ node::BlockPtr Parser::parse()
     }
 
     return block;
+}
+
+node::IdPtr Parser::getId()
+{
+    expect(TokenType::Id, "expecting identifier");
+    auto id = std::make_shared<node::Id>(std::get<std::string>(lexer->getToken().value).c_str(), lexer->getPos());
+    lexer->getNextToken();
+    return id;
 }
