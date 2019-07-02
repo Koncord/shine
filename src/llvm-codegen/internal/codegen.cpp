@@ -124,6 +124,8 @@ const NamedVariables::NamedVariablesT &NamedVariables::top() const
 
 bool LLVMCodegenImpl::isIntegerType(std::string ref, int &bitwidth, bool *isSigned)
 {
+    if (ref.size() < 2)
+        return false;
     if (ref[0] == 'i' || ref[0] == 'u')
     {
         if (isSigned != nullptr)

@@ -107,7 +107,7 @@ namespace shine
         LLVMValue popValue();
         void pushValue(LLVMValue value);
 
-        bool isIntegerType(std::string ref, int &bitwidth, bool *isSigned = nullptr);
+        static bool isIntegerType(std::string ref, int &bitwidth, bool *isSigned = nullptr);
 
         struct Params
         {
