@@ -351,9 +351,25 @@ namespace shine
                         return undo(), token(OpMul);
                 }
             case '/':
-                return '=' == next()
-                       ? token(OpDivAssign)
-                       : (undo(), token(OpDiv));
+                switch (next())
+                {
+                    case '=':
+                        return token(OpDivAssign);
+                    case '/':
+                        while ((c = next()) != '\n' && c);
+                        undo();
+                        goto scan;
+                    case '*':
+                        while (!((c = next()) == '/' && source[offset - 2] == '*'))
+                        {
+                            if (c == '\n' || c == '\r')
+                                newLine();
+                        }
+                        goto scan;
+                    default:
+                        undo();
+                        return token(OpDiv);
+                }
             case '!':
                 return '=' == next()
                        ? token(OpNEq)
@@ -402,10 +418,6 @@ namespace shine
                     default:
                         return undo(), token(OpGT);
                 }
-            case '#':
-                while ((c = next()) != '\n' && c);
-                undo();
-                goto scan;
             case ';':
                 return token(Semicolon);
             case '\n':
