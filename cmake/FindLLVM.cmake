@@ -125,6 +125,8 @@ else()
     # using the separate "--system-libs" flag.
     llvm_set(SYSTEM_LIBS system-libs)
     string(REPLACE "\n" " " LLVM_LDFLAGS "${LLVM_LDFLAGS} ${LLVM_SYSTEM_LIBS}")
+    string(REPLACE "\\" "/" LLVM_LDFLAGS "${LLVM_LDFLAGS}") # fix path on windows
+    string(REGEX REPLACE " $" "" LLVM_LDFLAGS "${LLVM_LDFLAGS}") # remove trailing space
     llvm_set(LIBRARY_DIRS libdir true)
     llvm_set_libs(LIBRARIES libs)
     # LLVM bug: llvm-config --libs tablegen returns -lLLVM-3.8.0
