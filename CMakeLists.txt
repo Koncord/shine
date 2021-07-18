@@ -16,13 +16,6 @@ endif()
 
 find_package(LLVM 8.0 REQUIRED)
 
-FetchContent_Declare(
-        Catch2
-        GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-        GIT_TAG        v2.13.6)
-
-FetchContent_MakeAvailable(Catch2)
-
 
 include_directories(
         SYSTEM ${LLVM_INCLUDE_DIRS}
