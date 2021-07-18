@@ -889,7 +889,7 @@ void LLVMCodegenImpl::visit(const node::ScopePtr &node) {
 }*/
 
 void LLVMCodegenImpl::visit(node::ProtoPtr const &node) {
-    Function *func = createProto(node->name, node->type, node->params);
+    /*Function *func = */createProto(node->name, node->type, node->params);
     //func->addAttribute(1, Attribute::ReadOnly);
     //func->addAttribute(1, Attribute::NoCapture);
 }

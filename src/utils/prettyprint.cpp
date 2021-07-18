@@ -387,7 +387,7 @@ namespace {
             if (!node->funParams.empty()) {
                 print_func("(");
                 ++indents;
-                for (int i = 0; i < node->funParams.size(); ++i) {
+                for (uint64_t i = 0; i < node->funParams.size(); ++i) {
                     node->funParams[i]->accept(*this);
                     if (i != node->funParams.size() - 1)
                         print_func(", ");
