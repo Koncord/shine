@@ -1,5 +1,7 @@
 ![Shine programming language](docs/shineLogo.png)
 
+![Linux CI](https://github.com/Koncord/shine/actions/workflows/ci_build_linux.yml/badge.svg)
+
  Shine is an expressive, minimalistic, statically typed programming language implemented in C++.
  With influences derived from languages such as Rust, Ruby, Lua, and C.
 
