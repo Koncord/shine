@@ -3,15 +3,12 @@
 #include "token.hpp"
 #include <vector>
 #include <string>
-#include <stdexcept>
-#include "position.hpp"
+#include <utils/position.hpp>
 
 // Lexer struct.
-namespace shine
-{
-    class ParseException;
-    class Lexer
-    {
+namespace shine {
+    class Lexer {
+        friend class LexerException;
         friend class ParseException;
         //friend class Parser;
 
@@ -27,31 +24,36 @@ namespace shine
 
         int undo();
         int next();
+        bool tryNext(int &result);
+        bool tryUndo(int &result);
         void newLine();
         TokenType scan();
     public:
         Lexer(std::vector<char> source, const char *filename) : source(std::move(source)), filename(filename) {}
 
+        Lexer(std::string const &source, const char *filename) : source(source.begin(), source.end()),
+                                                                 filename(filename) {}
+
         int getLine() const { return lineno; }
-        int getLinePos() const { return linepos; }
-        Position getPos() const { return Position {getLine(), getLinePos()}; }
+
+        int getLinePosition() const { return linepos; }
+
+        Position getPosition() const { return Position{getLine(), getLinePosition()}; }
 
         Token getToken() const { return tok; }
+
         bool isType(TokenType t) { return tok.type == t; }
 
 
-        bool isEquality() const
-        {
+        bool isEquality() const {
             return shine::isEquality(tok.type);
         }
 
-        bool isRelational() const
-        {
+        bool isRelational() const {
             return shine::isRelational(tok.type);
         }
 
-        const Token &getNextToken()
-        {
+        const Token &getNextToken() {
             scan();
             return tok;
         }
@@ -64,7 +66,7 @@ namespace shine
         int stash = 0;
         int lineno = 1;
         int linepos = 1;
-        off_t offset = 0;
-        Token tok {};
+        size_t offset = 0;
+        Token tok{};
     };
 }

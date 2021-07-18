@@ -3,8 +3,7 @@
 #include <vector>
 #include <string_view>
 
-enum class Color
-{
+enum class Color {
     Black,
     White,
     Gray,

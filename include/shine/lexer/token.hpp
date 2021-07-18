@@ -4,8 +4,7 @@
 #include <string>
 #include <variant>
 
-namespace shine
-{
+namespace shine {
 
 #define SHINE_TOKEN_LIST \
   t(Illegal, "illegal") \
@@ -92,23 +91,20 @@ namespace shine
   t(OpModScope, "::") \
   t(Last, "")
 
-    enum class TokenType
-    {
+    enum class TokenType {
 #define t(tok, str) tok,
         SHINE_TOKEN_LIST
 #undef t
     };
 
-    struct __T
-    {
+    struct __T {
         TokenType type;
         const char *stoken;
 
         constexpr __T(TokenType type, const char *stoken) : type(type), stoken(stoken) {}
     };
 
-    class TokenHelper
-    {
+    class TokenHelper {
     public:
         static constexpr __T token_strings[] = {
 #define t(tok, str) {TokenType::tok, str},
@@ -116,35 +112,30 @@ namespace shine
 #undef t
         };
 
-        static constexpr const char *getTokenName(TokenType type, int N = 0)
-        {
+        static constexpr const char *getTokenName(TokenType type, int N = 0) {
             if (token_strings[N].type != type)
                 return getTokenName(type, ++N);
             return token_strings[N].stoken;
         }
 
-        static const char *getTokenTypeString(TokenType type)
-        {
+        static const char *getTokenTypeString(TokenType type) {
             assert(type < TokenType::Last);
             return getTokenName(type);
         }
 
-        static bool isCompare(TokenType type)
-        {
+        static bool isCompare(TokenType type) {
             return type >= TokenType::OpGT && type <= TokenType::OpNEq;
         }
     };
 
-    struct Token
-    {
+    struct Token {
         int len = 0;
         TokenType type = TokenType::Illegal;
 
         std::variant<std::string, double, int64_t, bool> value;
     };
 
-    inline bool isRelational(TokenType type)
-    {
+    inline bool isRelational(TokenType type) {
         return type == TokenType::OpLT || type == TokenType::OpLTE
                || type == TokenType::OpGT || type == TokenType::OpGTE;
     }

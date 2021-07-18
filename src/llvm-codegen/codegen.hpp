@@ -1,15 +1,14 @@
 #pragma once
+
 #include <types.hpp>
 #include <memory>
 
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
 
-namespace shine
-{
+namespace shine {
     struct LLVMCtx;
-    class LLVMCodegen
-    {
+    class LLVMCodegen {
     public:
         LLVMCodegen(shine::node::NodePtr root, std::string_view path);
         ~LLVMCodegen();

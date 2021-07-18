@@ -1,18 +1,42 @@
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.14)
 project(shine)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/)
 include(PVS-Studio)
+Include(FetchContent)
+
+
+if(MSVC)
+    add_compile_options(/W4 /WX)
+else()
+    add_compile_options(-Wall -Wextra -pedantic -Wno-unknown-pragmas)
+endif()
+
 
 find_package(LLVM 8.0 REQUIRED)
+
+FetchContent_Declare(
+        Catch2
+        GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+        GIT_TAG        v2.13.6)
+
+FetchContent_MakeAvailable(Catch2)
+
 
 include_directories(
         SYSTEM ${LLVM_INCLUDE_DIRS}
         src
+        include/shine
 )
 
 #add_definitions(-DDEBUG_PARSER)
+
+add_subdirectory(libast)
+add_subdirectory(liblexer)
+add_subdirectory(libutils)
+
+add_subdirectory(tests)
 
 FILE(GLOB SRCSPP
         src/*.cpp
@@ -20,9 +44,9 @@ FILE(GLOB SRCSPP
         src/*/*/*.cpp
         )
 
-add_executable(shine ${SRCS} ${SRCSPP})
+add_executable(shine ${SRCSPP})
 
-target_link_libraries(shine ${LLVM_LIBRARIES} ${LLVM_LDFLAGS})
+target_link_libraries(shine ${LLVM_LIBRARIES} ${LLVM_LDFLAGS} shineast shinelexer shineutils)
 
 option(ENABLE_PVS_OPTION "Enable PVS Studio" FALSE)
 

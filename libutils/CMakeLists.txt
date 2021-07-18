@@ -1,0 +1,1 @@
+add_library(shineutils exception.cpp utils.cpp)

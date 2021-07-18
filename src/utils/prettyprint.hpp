@@ -2,8 +2,7 @@
 
 #include <types.hpp>
 
-namespace shine
-{
+namespace shine {
     // default printf
     void SetPrettyPrintFunc(int (*func)(const char *format, ...));
 

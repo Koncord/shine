@@ -8,13 +8,11 @@
 
 using namespace llvm;
 
-namespace shine
-{
+namespace shine {
     Value *LLVMCodegenImpl::IntCast(
             const LLVMValue &leftValue,
             const LLVMValue &rightValue
-    )
-    {
+    ) {
         Value *lval = leftValue.value;
         Value *rval = rightValue.value;
         Type *lRealType = lval->getType()->isPointerTy() ? lval->getType()->getPointerElementType() : lval->getType();
@@ -25,8 +23,7 @@ namespace shine
         if (rval->getType()->isFloatingPointTy())
             rval = leftValue.sign ? builder->CreateFPToSI(rval, lRealType)
                                   : builder->CreateFPToUI(rval, lRealType);
-        else if (!rval->getType()->isPointerTy())
-        {
+        else if (!rval->getType()->isPointerTy()) {
             int rbitwidth = rval->getType()->getIntegerBitWidth();
             int lbitwidth = lRealType->getIntegerBitWidth();
             if (lbitwidth > rbitwidth)
@@ -38,24 +35,20 @@ namespace shine
         return rval;
     }
 
-    llvm::Value *LLVMCodegenImpl::FPCast(const LLVMValue &leftValue, const LLVMValue &rightValue)
-    {
+    llvm::Value *LLVMCodegenImpl::FPCast(const LLVMValue &leftValue, const LLVMValue &rightValue) {
         Value *lval = leftValue.value;
         Value *rval = rightValue.value;
         Type *lRealType = lval->getType()->isPointerTy() ? lval->getType()->getPointerElementType() : lval->getType();
 
-        if (rval->getType()->isIntegerTy())
-        {
+        if (rval->getType()->isIntegerTy()) {
             rval = rightValue.sign ? builder->CreateSIToFP(rval, lRealType)
                                    : builder->CreateUIToFP(rval, lRealType);
-        }
-        else
-        {
+        } else {
             bool isRDouble = rval->getType()->isDoubleTy();
             bool isLDouble = lRealType->isDoubleTy();
             if (isLDouble && !isRDouble)
                 rval = builder->CreateFPExt(rval, lRealType);
-            else if(!isLDouble && isRDouble)
+            else if (!isLDouble && isRDouble)
                 rval = builder->CreateFPTrunc(rval, lRealType);
         }
         return rval;
@@ -64,14 +57,12 @@ namespace shine
     LLVMValue LLVMCodegenImpl::createUnaryOperation(
             const node::UnaryOpPtr &uno,
             const LLVMValue &value
-    )
-    {
+    ) {
         bool constant = value.constant;
         Value *result = nullptr;
         Value *val = value.value;
         bool isFpOp = val->getType()->isFloatingPointTy();
-        switch (uno->op)
-        {
+        switch (uno->op) {
             case TokenType::OpBitNot:
                 if (isFpOp)
                     goto float_err;
@@ -107,11 +98,12 @@ namespace shine
             case TokenType::OpMinus: // unary minus
                 if (isFpOp)
                     result = builder->CreateFNeg(val);
-                else
-                {
+                else {
                     //builder->CreateNSWSub()
                     result = builder->CreateSub(ConstantInt::get(val->getType(), 0), val);
                 }
+                break;
+            default:
                 break;
         }
         if (result == nullptr)
@@ -134,8 +126,7 @@ namespace shine
             const node::BinaryOpPtr &bin,
             const LLVMValue &leftValue,
             const LLVMValue &rightValue
-    )
-    {
+    ) {
         bool constant = leftValue.constant;
         Value *result = nullptr;
 
@@ -151,13 +142,11 @@ namespace shine
         else
             rval = IntCast(leftValue, rightValue);
 
-        switch (bin->op)
-        {
+        switch (bin->op) {
             case TokenType::OpMod:
                 if (isFpOp)
                     result = builder->CreateFRem(lval, rval);
-                else
-                {
+                else {
                     if (sign)
                         result = builder->CreateSRem(lval, rval);
                     else
@@ -208,6 +197,7 @@ namespace shine
             case TokenType::OpPlusAssign:
                 if (constant)
                     goto const_err;
+                break;
             case TokenType::OpPlus:
                 if (isFpOp)
                     result = builder->CreateFAdd(lval, rval);
@@ -217,6 +207,7 @@ namespace shine
             case TokenType::OpMinusAssign:
                 if (constant)
                     goto const_err;
+                break;
             case TokenType::OpMinus:
                 if (isFpOp)
                     result = builder->CreateFSub(lval, rval);
@@ -226,6 +217,7 @@ namespace shine
             case TokenType::OpMulAssign:
                 if (constant)
                     goto const_err;
+                break;
             case TokenType::OpMul:
                 if (isFpOp)
                     result = builder->CreateFMul(lval, rval);
@@ -235,11 +227,11 @@ namespace shine
             case TokenType::OpDivAssign:
                 if (constant)
                     goto const_err;
+                break;
             case TokenType::OpDiv:
                 if (isFpOp)
                     result = builder->CreateFDiv(lval, rval);
-                else
-                {
+                else {
                     if (leftValue.sign)
                         result = builder->CreateSDiv(lval, rval);
                     else
@@ -249,6 +241,7 @@ namespace shine
             case TokenType::OpAndAssign:
                 if (constant)
                     goto const_err;
+                break;
             case TokenType::OpBitAnd:
                 if (isFpOp)
                     goto float_err;
@@ -257,6 +250,7 @@ namespace shine
             case TokenType::OpOrAssign:
                 if (constant)
                     goto const_err;
+                break;
             case TokenType::OpBitOr:
                 if (isFpOp)
                     goto float_err;
@@ -277,12 +271,14 @@ namespace shine
                     goto float_err;
                 result = builder->CreateAShr(lval, rval);
                 break;
+            default:
+                break;
         }
         if (result == nullptr)
             throw shine::ShineException(filename,
                                         bin->pos,
                                         std::string("Unhandled binary operation: \"") +
-                                                TokenHelper::getTokenTypeString(bin->op) + "\".");
+                                        TokenHelper::getTokenTypeString(bin->op) + "\".");
 
         return LLVMValue(result, sign, constant);
         const_err:

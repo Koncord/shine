@@ -23,14 +23,11 @@ static int optLevel = 0;
 static std::string outFile;
 std::vector<std::string> sources;
 
-void eval(std::vector<char> &source, const std::string &path)
-{
+void eval(std::vector<char> &source, const std::string &path) {
     shine::Lexer lex(source, path.c_str());
 
-    if (tokens)
-    {
-        while (lex.getNextToken().type != shine::TokenType::EOS && !lex.isType(shine::TokenType::Illegal))
-        {
+    if (tokens) {
+        while (lex.getNextToken().type != shine::TokenType::EOS && !lex.isType(shine::TokenType::Illegal)) {
             coloredPrintf(Color::Gray, "%d", lex.getLine());
             lex.inspect();
         }
@@ -42,8 +39,7 @@ void eval(std::vector<char> &source, const std::string &path)
 
     root = parser.parse();
 
-    if (ast)
-    {
+    if (ast) {
         shine::PrettyPrint(root);
         return;
     }
@@ -56,8 +52,7 @@ void eval(std::vector<char> &source, const std::string &path)
             std::find_if(path.rbegin(), path.rend(), [](char ch) { return ch == '\\' || ch == '/'; }).base(),
             path.end()); // todo: add support for -o flag
 
-    if (!exec)
-    {
+    if (!exec) {
         std::string outfile;
 
         if (outFile.empty())
@@ -67,19 +62,16 @@ void eval(std::vector<char> &source, const std::string &path)
             );
 
 
-        if (genIR)
-        {
+        if (genIR) {
             std::ofstream stream(outfile + "ll");
             llvm.print(stream);
-        }
-        else
+        } else
             llvm.objectFile(outfile + "o");
 
         return;
     }
 
-    if (genIR)
-    {
+    if (genIR) {
         llvm.print(std::cout);
         std::cout << std::endl;
     }
@@ -88,10 +80,8 @@ void eval(std::vector<char> &source, const std::string &path)
         llvm.execute(0, nullptr);
 }
 
-void parseFiles()
-{
-    for (const auto &path : sources)
-    {
+void parseFiles() {
+    for (const auto &path : sources) {
         std::vector<char> source = file_read(path.c_str());
 
         if (source.empty())
@@ -101,22 +91,7 @@ void parseFiles()
     }
 }
 
-
-#ifdef WIN32
-#include <windows.h>
-void *hConsole;
-void setupConsole()
-{
-    hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-}
-#else
-
-void setupConsole() {}
-
-#endif
-
-void parseArgs(int argc, const char **argv)
-{
+void parseArgs(int argc, const char **argv) {
     using namespace llvm;
 
     cl::SetVersionPrinter([](raw_ostream &stream) {
@@ -142,8 +117,7 @@ void parseArgs(int argc, const char **argv)
     cl::opt<bool> genIR("asm", cl::desc("Stop after generating IR code"), cl::cat(compilerCategory));
     cl::alias genIR2("S", cl::desc("Alias for -asm"), cl::aliasopt(genIR), cl::cat(compilerCategory));
 
-    enum OptLevel
-    {
+    enum OptLevel {
         O0, O1, O2, O3
     };
 
@@ -165,10 +139,7 @@ void parseArgs(int argc, const char **argv)
     ::outFile = outFile.getValue();
 }
 
-int main(int argc, const char **argv)
-{
-    setupConsole();
-
+int main(int argc, const char **argv) {
     parseArgs(argc, argv);
 
 //    try

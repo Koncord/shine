@@ -1,13 +1,11 @@
 #pragma once
 
 #include <string>
-#include <ast/ast.hpp>
+#include "ast.hpp"
+#include <lexer/token.hpp>
 
-namespace shine
-{
-    class ParseException;
-    class Parser
-    {
+namespace shine {
+    class Parser {
         friend class ParseException;
     private:
         node::NodePtr expression();
@@ -29,7 +27,7 @@ namespace shine
         node::NodePtr equality_expression();
         node::NodePtr bitwise_and_expression();
         node::NodePtr bitwise_xor_expression();
-        node::NodePtr bitswise_or_expression();
+        node::NodePtr bitwise_or_expression();
         node::NodePtr logical_or_expression();
         node::NodePtr logical_and_expression();
         node::NodePtr slot_access_expression(node::NodePtr left);

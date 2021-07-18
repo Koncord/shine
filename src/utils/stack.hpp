@@ -4,11 +4,9 @@
 
 #include <stack>
 
-namespace shine::util
-{
+namespace shine::util {
     template<typename _Tp, typename _Sequence = std::deque<_Tp>>
-    class stack
-    {
+    class stack {
     public:
         typedef typename _Sequence::value_type value_type;
         typedef typename _Sequence::reference reference;
@@ -29,8 +27,7 @@ namespace shine::util
 
         template<typename _Seq = _Sequence, typename _Requires = typename
         std::enable_if<std::is_default_constructible<_Seq>::value>::type>
-        stack()
-                : c() {}
+        stack() : c() {}
 
         explicit stack(const _Sequence &__c) : c(__c) {}
 
@@ -51,15 +48,13 @@ namespace shine::util
         template<typename _Alloc, typename _Requires = _Uses<_Alloc>>
         stack(stack &&__q, const _Alloc &__a): c(std::move(__q.c), __a) {}
 
-        value_type pop()
-        {
+        value_type pop() {
             auto v = top();
             vpop();
             return v;
         }
 
-        void vpop()
-        {
+        void vpop() {
             c.pop_back();
         }
 
@@ -95,14 +90,9 @@ namespace shine::util
         template<typename... _Args>
         decltype(auto) emplace(_Args &&... __args) { return c.emplace_back(std::forward<_Args>(__args)...); }
 
-        void swap(stack &__s)
-        {
+        void swap(stack &__s) {
             using std::swap;
             swap(c, __s.c);
         }
-
-
     };
 }
-
-

@@ -11,20 +11,20 @@
 #include "llvm/Support/raw_os_ostream.h"
 
 #include "llvm/Passes/PassBuilder.h"
+#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Support/TargetRegistry.h"
 
 
 #include <llvm/Support/InitLLVM.h>
 #include <llvm/Support/TargetSelect.h>
+#include <llvm/Support/ManagedStatic.h>
 #include "internal/codegen.hpp"
 
 using namespace llvm;
 using namespace shine;
 
-namespace
-{
-    LLVMCtx *build(const node::NodePtr &root, std::string path)
-    {
+namespace {
+    LLVMCtx *build(const node::NodePtr &root, std::string path) {
         std::string infile(
                 std::find_if(path.rbegin(), path.rend(), [](char ch) { return ch == '\\' || ch == '/'; }).base(),
                 path.end());
@@ -37,12 +37,10 @@ namespace
     }
 }
 
-void LLVMCodegen::print(std::ostream &os)
-{
+void LLVMCodegen::print(std::ostream &os) {
     InitializeNativeTargetAsmPrinter();
 
-    if (llvmctx == nullptr)
-    {
+    if (llvmctx == nullptr) {
         llvmctx = build(root, fpath);
         optimize();
     }
@@ -51,10 +49,8 @@ void LLVMCodegen::print(std::ostream &os)
     llvmctx->module->print(fileStream, nullptr);
 }
 
-void LLVMCodegen::objectFile(const std::string &fname)
-{
-    if (llvmctx == nullptr)
-    {
+void LLVMCodegen::objectFile(const std::string &fname) {
+    if (llvmctx == nullptr) {
         llvmctx = build(root, fpath);
         optimize();
     }
@@ -74,7 +70,7 @@ void LLVMCodegen::objectFile(const std::string &fname)
         builder->CreateRetVoid();
     }*/
 
-    auto targetTriple = sys::getDefaultTargetTriple();
+    auto targetTriple = LLVMGetDefaultTargetTriple();
 
     InitializeAllTargetInfos();
     InitializeAllTargets();
@@ -106,7 +102,7 @@ void LLVMCodegen::objectFile(const std::string &fname)
         throw std::runtime_error("Could not open file: " + ec.message());
 
     legacy::PassManager pass;
-    auto fileType = TargetMachine::CGFT_ObjectFile;
+    auto fileType = llvm::CGFT_ObjectFile;
 
     if (targetMachine->addPassesToEmitFile(pass, fileStream, nullptr, fileType))
         throw std::runtime_error("TargetMachine can't emit a file of this type");
@@ -115,8 +111,7 @@ void LLVMCodegen::objectFile(const std::string &fname)
     fileStream.flush();
 }
 
-void *findAndRunFnInLib(const char *lib, const char *sym)
-{
+void *findAndRunFnInLib(const char *lib, const char *sym) {
     if (llvm::sys::DynamicLibrary::LoadLibraryPermanently(lib))
         return llvm::sys::DynamicLibrary::SearchForAddressOfSymbol(sym);
     return nullptr;
@@ -125,10 +120,8 @@ void *findAndRunFnInLib(const char *lib, const char *sym)
 
 ExitOnError ExitOnErr;
 
-void LLVMCodegen::execute(int argc, char *argv[])
-{
-    if (llvmctx == nullptr)
-    {
+void LLVMCodegen::execute(int argc, char *argv[]) {
+    if (llvmctx == nullptr) {
         llvmctx = build(root, fpath);
         optimize();
     }
@@ -140,8 +133,8 @@ void LLVMCodegen::execute(int argc, char *argv[])
     std::string err;
     EngineBuilder eb(std::move(llvmctx->module));
     eb.setErrorStr(&err)
-      .setEngineKind(EngineKind::JIT)
-      .setOptLevel(CodeGenOpt::Aggressive);
+            .setEngineKind(EngineKind::JIT)
+            .setOptLevel(CodeGenOpt::Aggressive);
     ExecutionEngine *ee = eb.create();
     auto mainFn = reinterpret_cast<int (*)(int, char **)>(ee->getFunctionAddress("main"));
 
@@ -159,8 +152,7 @@ void LLVMCodegen::execute(int argc, char *argv[])
     llvm_shutdown();
 }
 
-void LLVMCodegen::optimize()
-{
+void LLVMCodegen::optimize() {
     assert(llvmctx != nullptr);
     if (optLevel == 0) return;
     llvm::PassBuilder passBuilder;
@@ -182,8 +174,7 @@ void LLVMCodegen::optimize()
 
     PassBuilder::OptimizationLevel lvl;
 
-    switch (optLevel)
-    {
+    switch (optLevel) {
         case 1:
             lvl = llvm::PassBuilder::OptimizationLevel::O1;
             break;
@@ -200,17 +191,14 @@ void LLVMCodegen::optimize()
     modulePassManager.run(*llvmctx->module, moduleAnalysisManager);
 }
 
-void LLVMCodegen::setOptLevel(int level)
-{
+void LLVMCodegen::setOptLevel(int level) {
     optLevel = level;
 }
 
-LLVMCodegen::LLVMCodegen(shine::node::NodePtr root, std::string_view path) : root(std::move(root)), fpath(path.data())
-{
+LLVMCodegen::LLVMCodegen(shine::node::NodePtr root, std::string_view path) : root(std::move(root)), fpath(path.data()) {
     llvmctx = nullptr;
 }
 
-LLVMCodegen::~LLVMCodegen()
-{
+LLVMCodegen::~LLVMCodegen() {
     delete llvmctx;
 }

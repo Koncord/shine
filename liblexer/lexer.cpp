@@ -5,14 +5,12 @@
 #include <lexer/lexer.hpp>
 #include <utils/utils.hpp>
 #include <utils/exception.hpp>
-#include <lexer/token.hpp>
-#include <stdexcept>
+
 // Assign token `t`.
 #define token(t) (tok.type = TokenType::t)
 
 // True if the lexer should insert a semicolon after `t`.
-constexpr bool need_semi(shine::TokenType t)
-{
+constexpr bool need_semi(shine::TokenType t) {
     return t == shine::TokenType::Id || t == shine::TokenType::Float
            || t == shine::TokenType::I64 || t == shine::TokenType::I32
            || t == shine::TokenType::I16 || t == shine::TokenType::I8
@@ -23,28 +21,23 @@ constexpr bool need_semi(shine::TokenType t)
 }
 
 // Convert hex digit `c` to a base 10 int, returning -1 on failure.
-static int hex(const char c)
-{
+static int hex(const char c) {
     if (c >= '0' && c <= '9') return c - '0';
     if (c >= 'a' && c <= 'f') return c - 'a' + 10;
     if (c >= 'A' && c <= 'F') return c - 'A' + 10;
     return -1;
 }
 
-namespace shine
-{
+namespace shine {
 // Scan identifier.
-    TokenType Lexer::scan_ident(int c)
-    {
+    TokenType Lexer::scan_ident(int c) {
         std::string buf;
         token(Id);
-        do
-        {
+        do {
             buf.push_back((char) c);
-        } while (isalpha(c = next()) || isdigit(c) || '_' == c);
+        } while (tryNext(c) && (isalpha(c) || isdigit(c) || '_' == c));
         undo();
-        switch (buf.size())
-        {
+        switch (buf.size()) {
             case 2:
                 if (buf == "if") return token(If);
                 if (buf == "as") return token(As);
@@ -56,8 +49,8 @@ namespace shine
                 if (buf == "end") return token(End);
                 if (buf == "let") return token(Let);
                 if (buf == "not") return token(OpLNot);
-                if (buf == "mod") return  token(Mod);
-                if (buf == "pub") return  token(Pub);
+                if (buf == "mod") return token(Mod);
+                if (buf == "pub") return token(Pub);
                 break;
             case 4:
                 if (buf == "case") return token(Case);
@@ -87,6 +80,7 @@ namespace shine
                 if (buf == "repeat") return token(Repeat);
                 if (buf == "unless") return token(Unless);
                 if (buf == "extern") return token(Extern);
+                break;
             default:
                 if (buf == "continue") return token(Continue);
         }
@@ -96,24 +90,20 @@ namespace shine
     }
 
 // Scan string hex literal, returning -1 on invalid digits.
-    int Lexer::hex_literal()
-    {
+    int Lexer::hex_literal() {
         int a = hex(next());
         int b = hex(next());
         if (a > -1 && b > -1) return a << 4 | b;
-        throw ParseException(this, "string hex literal \\x contains invalid digits");
+        throw LexerException(this, "string hex literal \\x contains invalid digits");
     }
 
-    char Lexer::scan_char(int c)
-    {
-        switch (c)
-        {
+    char Lexer::scan_char(int c) {
+        switch (c) {
             case '\n':
                 newLine();
                 break;
             case '\\':
-                switch (c = next())
-                {
+                switch (c = next()) {
                     case '0':
                         c = '\0';
                         break;
@@ -123,8 +113,8 @@ namespace shine
                     case 'b':
                         c = '\b';
                         break;
-                    case 'e':
-                        c = '\e';
+                    case 'e': // GNU extension
+                        c = '\033';
                         break;
                     case 'f':
                         c = '\f';
@@ -143,20 +133,24 @@ namespace shine
                         break;
                     case 'x':
                         c = hex_literal();
+                        break;
+                    default:
+                        return c;
                 }
                 break;
+            default:
+                return c;
         }
         return c;
     }
+
 // Scan string.
-    TokenType Lexer::scan_string()
-    {
+    TokenType Lexer::scan_string() {
         int c;
         std::string buf;
         token(String);
 
-        while ('\"' != (c = next()))
-        {
+        while (tryNext(c) && ('\"' != (c))) {
             c = scan_char(c);
             buf.push_back(c);
         }
@@ -166,9 +160,9 @@ namespace shine
     }
 
 // Scan number.
-    TokenType Lexer::scan_number(int c)
-    {
-        int64_t n = 0, type = 0, expo = 0, e;
+    TokenType Lexer::scan_number(int c) {
+        int64_t n = 0, type = 0, expo = 0;
+        double e;
         int expo_type = 1;
         /* expo_type:
          * 1 -> '+'(default)
@@ -176,45 +170,37 @@ namespace shine
          */
         token(I64);
 
-        char ch = c;
-
         if (c == '0')
             goto scan_hex;
         else
             goto scan_int;
 
         scan_hex:
-        switch (c = next())
-        {
-            case 'x':
-                if (!isxdigit(c = next()))
-                {
-                    throw ParseException(this, "hex literal expects one or more digits");
-                }
-                else
-                {
-                    do n = n << 8 | hex(c);
-                    while (isxdigit(c = next()));
-                }
-                tok.value = n;
-                undo();
-                return tok.type;
-            default:
-                undo();
-                c = '0';
-                goto scan_int;
+        if ((c = next()) == 'x') {
+            if (!isxdigit(c = next())) {
+                throw LexerException(this, "hex literal expects one or more digits");
+            } else {
+                do n = n << 4 | hex(c);
+                while (tryNext(c) && isxdigit(c));
+            }
+            tok.value = n;
+            undo();
+            return tok.type;
+        } else {
+            undo();
+            c = '0';
+            goto scan_int;
         }
 
         // [0-9_]+
 
         scan_int:
-        do
-        {
+        do {
             if ('_' == c) continue;
             else if ('.' == c) goto scan_float;
             else if ('e' == c || 'E' == c) goto scan_expo;
             n = n * 10 + c - '0';
-        } while (isdigit(c = next()) || '_' == c || '.' == c || 'e' == c || 'E' == c);
+        } while (tryNext(c) && (isdigit(c) || '_' == c || '.' == c || 'e' == c || 'E' == c));
         undo();
         tok.value = n;
         return tok.type;
@@ -223,20 +209,18 @@ namespace shine
 
         scan_float:
         {
-            e = 1;
+            e = 1.0;
             type = 1;
             token(Float);
-            while (isdigit(c = next()) || '_' == c || 'e' == c || 'E' == c)
-            {
+            while (tryNext(c) && (isdigit(c) || '_' == c || 'e' == c || 'E' == c)) {
                 if ('_' == c) continue;
                 else if ('e' == c || 'E' == c) goto scan_expo;
                 n = n * 10 + c - '0';
-                e *= 10;
+                e *= 10.0;
             }
             if ('f' == c)
                 tok.value = (float) n / e;
-            else
-            {
+            else {
                 undo();
                 tok.value = (double) n / e;
             }
@@ -247,10 +231,8 @@ namespace shine
 
         scan_expo:
         {
-            while (isdigit(c = next()) || '+' == c || '-' == c)
-            {
-                if ('-' == c)
-                {
+            while (tryNext(c) && (isdigit(c) || '+' == c || '-' == c)) {
+                if ('-' == c) {
                     expo_type = 0;
                     continue;
                 }
@@ -270,14 +252,16 @@ namespace shine
 
 // Scan the _next token in the stream, returns 0 on EOS, Illegal token, or a syntax error.
 
-    TokenType Lexer::scan()
-    {
+    TokenType Lexer::scan() {
         int c;
 
         // scan
         scan:
-        switch (c = next())
-        {
+        if (!tryNext(c))
+            return token(EOS);
+        if (offset >= source.size())
+            return token(EOS);
+        switch (c) {
             case ' ':
             case '\t':
                 goto scan;
@@ -295,15 +279,12 @@ namespace shine
                 return token(RBrack);
             case ',':
                 return token(Comma);
-            case '.':
-            {
-                if ('.' != next())
-                {
+            case '.': {
+                if ('.' != next()) {
                     undo();
                     return token(OpDot);
                 }
-                if ('.' != next())
-                {
+                if ('.' != next()) {
                     undo();
                     goto scan;
                 }
@@ -323,8 +304,7 @@ namespace shine
                 undo();
                 return token(Colon);
             case '+':
-                switch (next())
-                {
+                switch (next()) {
                     case '+':
                         return token(OpIncr);
                     case '=':
@@ -333,8 +313,7 @@ namespace shine
                         return undo(), token(OpPlus);
                 }
             case '-':
-                switch (next())
-                {
+                switch (next()) {
                     case '-':
                         return token(OpDecr);
                     case '=':
@@ -343,25 +322,22 @@ namespace shine
                         return undo(), token(OpMinus);
                 }
             case '*':
-                switch (next())
-                {
+                switch (next()) {
                     case '=':
                         return token(OpMulAssign);
                     default:
                         return undo(), token(OpMul);
                 }
             case '/':
-                switch (next())
-                {
+                switch (next()) {
                     case '=':
                         return token(OpDivAssign);
                     case '/':
-                        while ((c = next()) != '\n' && c);
+                        while (tryNext(c) && (c != '\n' && c));
                         undo();
                         goto scan;
                     case '*':
-                        while (!((c = next()) == '/' && source[offset - 2] == '*'))
-                        {
+                        while (tryNext(c) && (!(c == '/' && source[offset - 2] == '*'))) {
                             if (c == '\n' || c == '\r')
                                 newLine();
                         }
@@ -379,8 +355,7 @@ namespace shine
                        ? token(OpEq)
                        : (undo(), token(OpAssign));
             case '&':
-                switch (next())
-                {
+                switch (next()) {
                     case '&':
                         return '=' == next()
                                ? token(OpAndAssign)
@@ -389,8 +364,7 @@ namespace shine
                         return undo(), token(OpBitAnd);
                 }
             case '|':
-                switch (next())
-                {
+                switch (next()) {
                     case '|':
                         return '=' == next()
                                ? token(OpOrAssign)
@@ -399,8 +373,7 @@ namespace shine
                         return undo(), token(OpBitOr);
                 }
             case '<':
-                switch (next())
-                {
+                switch (next()) {
                     case '=':
                         return token(OpLTE);
                     case '<':
@@ -409,8 +382,7 @@ namespace shine
                         return undo(), token(OpLT);
                 }
             case '>':
-                switch (next())
-                {
+                switch (next()) {
                     case '=':
                         return token(OpGTE);
                     case '>':
@@ -422,16 +394,14 @@ namespace shine
                 return token(Semicolon);
             case '\n':
             case '\r':
-                if (need_semi(tok.type))
-                {
+                if (need_semi(tok.type)) {
                     return undo(), token(Semicolon);
                 }
                 newLine();
                 goto scan;
             case '"':
                 return scan_string();
-            case '\'':
-            {
+            case '\'': {
                 tok.value = (int64_t) scan_char(next());
                 next();
                 return token(I64);
@@ -440,21 +410,19 @@ namespace shine
                 return token(EOS);
             default:
                 if (isalpha(c) || '_' == c) return scan_ident(c);
-                if (isdigit(c) || '.' == c)
-                {
+                if (isdigit(c) || '.' == c) {
                     return scan_number(c);
                 }
                 token(Illegal);
-                throw ParseException(this, "illegal character");
+                throw LexerException(this, "illegal character");
         }
     }
 
 /*
- * Inspect the given `tok`, outputting debugging information to stdout.
+ * Inspect the given `tok`, outputting debug information to the stdout.
  */
 
-    void Lexer::inspect() const
-    {
+    void Lexer::inspect() const {
         coloredPrintf(Color::Gray, " %s", TokenHelper::getTokenTypeString(tok.type));
 
         std::visit([this](auto &&arg) {
@@ -470,22 +438,42 @@ namespace shine
         printf("\n");
     }
 
-    void Lexer::newLine()
-    {
+    void Lexer::newLine() {
         linepos = 1;
         ++lineno;
     }
 
-    int Lexer::next()
-    {
+    int Lexer::next() {
         ++linepos;
+        if (offset + 1 > source.size())
+            throw LexerException(this, "Out of bounds.");
         stash = source[offset++];
         return stash;
     }
 
-    int Lexer::undo()
-    {
+    int Lexer::undo() {
         --linepos;
+        if (offset == 0)
+            throw LexerException(this, "Out of bounds.");
         return source[--offset] = stash;
+    }
+
+    bool Lexer::tryNext(int &result) {
+        if (offset + 1 > source.size())
+            return false;
+
+        ++linepos;
+        stash = source[offset++];
+        result = stash;
+        return true;
+    }
+
+    bool Lexer::tryUndo(int &result) {
+        if (offset == 0)
+            return false;
+        --linepos;
+        source[--offset] = stash;
+        result = stash;
+        return true;
     }
 }
