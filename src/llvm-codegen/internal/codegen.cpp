@@ -16,7 +16,7 @@ LLVMCodegenImpl::LLVMCodegenImpl(const node::NodePtr &root, LLVMCtx *llvmctx, st
     registerBuiltinNumericTypes();
     createProto("alloca",
                 std::make_shared<node::Type>("void", true, Position{}), {
-                        std::make_shared<node::Decl>((std::vector<node::IdPtr>) {
+                        std::make_shared<node::Decl>(std::vector<node::IdPtr> {
                                 std::make_shared<node::Id>("sz", Position{})
                         }, std::make_shared<node::Type>("i64", true, Position{}), Position{})
                 }
