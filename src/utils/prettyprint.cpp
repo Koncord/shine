@@ -473,15 +473,15 @@ namespace {
             print_func(")");
         }*/
 
-        void visit(const node::ContinuePtr &node) override {
+        void visit(const node::ContinuePtr &) override {
             print_func("(continue)");
         }
 
-        void visit(const node::BreakPtr &node) override {
+        void visit(const node::BreakPtr &) override {
             print_func("(break)");
         }
 
-        void visit(const node::VaArgPtr &node) override {
+        void visit(const node::VaArgPtr &) override {
             print_func("(vaarg)");
         }
 

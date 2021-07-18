@@ -43,7 +43,7 @@ void LLVMCodegenImpl::registerBuiltinNumericTypes() {
     }
 }
 
-Type *LLVMCodegenImpl::getRegisteredType(const std::string &typeName, bool getPtrType) {
+Type *LLVMCodegenImpl::getRegisteredType(const std::string &typeName, bool /*getPtrType*/) {
     return registeredTypes.at(typeName);
 }
 
@@ -177,7 +177,7 @@ Function *LLVMCodegenImpl::createProto(
 }
 
 Value *LLVMCodegenImpl::createCondition(
-        const node::NodePtr &node,
+        const node::NodePtr &/*node*/,
         const node::NodePtr &expr,
         const std::string &conditionName
 ) {
@@ -774,11 +774,11 @@ void LLVMCodegenImpl::visit(const node::ConstPtr &node) {
     //func->addAttribute(1, Attribute::NoCapture);
 }*/
 
-void LLVMCodegenImpl::visit(const node::ContinuePtr &node) {
+void LLVMCodegenImpl::visit(const node::ContinuePtr &/*node*/) {
     builder->CreateBr(loopContinueStack.top());
 }
 
-void LLVMCodegenImpl::visit(const node::BreakPtr &node) {
+void LLVMCodegenImpl::visit(const node::BreakPtr &/*node*/) {
     builder->CreateBr(breakStack.top());
 }
 
