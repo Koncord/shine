@@ -1,6 +1,6 @@
 extern printf(format: *i8, ...) : void;
 
-extern myFn(i : i64): void; # forward declaration
+extern myFn(i : i64): void; // forward declaration
 
 def main(argc : i32, argv : **i8): i32
     myFn(1);
@@ -16,6 +16,5 @@ def myFn(i : i64): void
         s = "Bye %d\n";
     end
     printf(s, i);
-    #return;                # void functions does not require return statement
+    #return;                // void functions does not require return statement
 end
-
