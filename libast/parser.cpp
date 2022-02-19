@@ -3,11 +3,14 @@
 #include <lexer/lexer.hpp>
 #include <utils/exception.hpp>
 #include <algorithm>
+#include <limits>
 
 using namespace shine;
 
 
 #ifdef DEBUG_PARSER
+
+#include <utils/utils.hpp>
 
 void Parser::debug(std::string_view str)
 {
@@ -166,7 +169,7 @@ node::NodePtr Parser::type_expression() {
 
     if (ret->isArray) {
         //expect(TokenType::I64, "expected number");
-        if (lexer->isType(TokenType::I64)) {
+        if (lexer->isType(TokenType::Number) || lexer->isType(TokenType::Char)) {
             ret->arrSize = std::get<int64_t>(lexer->getToken().value);
             lexer->getNextToken();
         }
@@ -231,14 +234,8 @@ node::NodePtr Parser::primary_expression() {
         case TokenType::Id:
             ret = std::make_shared<node::Id>(std::get<std::string>(lexer->getToken().value), lexer->getPosition());
             break;
-        case TokenType::I64:
-        case TokenType::I32:
-        case TokenType::I16:
-        case TokenType::I8:
-        case TokenType::U64:
-        case TokenType::U32:
-        case TokenType::U16:
-        case TokenType::U8:
+        case TokenType::Number:
+        case TokenType::Char:
             ret = std::make_shared<node::Int>(std::get<int64_t>(lexer->getToken().value), 8, lexer->getPosition());
             break;
         case TokenType::Boolean:
@@ -276,6 +273,11 @@ node::NodePtr Parser::postfix_expression() {
     auto pos = lexer->getPosition();
     debug("postfix_expression");
     if ((node = call_expression(nullptr)) == nullptr) return nullptr;
+
+    // todo: remove this hack!
+    if (pos.linepos != lexer->getLine())
+        return node;
+
     if (lexer->isType(TokenType::OpIncr) || lexer->isType(TokenType::OpDecr)) {
         node = std::make_shared<node::UnaryOp>(lexer->getToken().type, node, true, pos);
 
@@ -720,6 +722,51 @@ node::NodePtr Parser::call_expression(node::NodePtr left) {
     return slot_access_expression(left);
 }
 
+
+template <typename T, typename U>
+bool CanTypeFitValue(const U value) {
+    auto const botT = intmax_t(std::numeric_limits<T>::min() );
+    auto const botU = intmax_t(std::numeric_limits<U>::min() );
+    auto const topT = uintmax_t(std::numeric_limits<T>::max() );
+    auto const topU = uintmax_t(std::numeric_limits<U>::max() );
+    return !( (botT > botU && value < static_cast<U> (botT)) || (topT < topU && value > static_cast<U> (topT)) );
+}
+
+std::string DeduceIntType(uint64_t val) {
+    /*if (CanTypeFitValue<int8_t>(val)) {
+        return "i8";
+    }
+    if (CanTypeFitValue<int16_t>(val)) {
+        return "i16";
+    }*/
+    if (CanTypeFitValue<int32_t>(val)) {
+        return "i32";
+    }
+    if (CanTypeFitValue<int64_t>(val)) {
+        return "i64";
+    }
+    return "u64";
+}
+
+std::string DeduceType(node::NodePtr node) {
+    if (node->is(NodeType::UnaryOp)) {
+        auto uno = node->as<node::UnaryOp>();
+        if (uno->op == TokenType::OpMinus) {
+            node = uno->expr;
+        }
+    }
+    if (node->is(NodeType::Int)) {
+        auto item = node->as<node::Int>();
+        return DeduceIntType(item->val);
+    } else if (node->is(NodeType::Float)) {
+        auto item = node->as<node::Float>();
+        return "float";
+    } else if (node->is(NodeType::Boolean)) {
+        return "boolean";
+    }
+    return "";
+}
+
 /*
  * ('let' | 'const') decl_expr ('=' expression)? (',' decl_expression ('=' expr)?)*
  */
@@ -736,13 +783,61 @@ node::NodePtr Parser::variable_expression(const TokenType &tokenType) {
             ctx = "const expression";
 
         auto pos = lexer->getPosition();
-        bool needType = true; // todo: inference type by value
-        node::NodePtr decl = expect(decl_expression(needType), "expecting declaration");
+        bool needType = false;
+        node::DeclPtr decl = expect(decl_expression(needType), "expecting declaration")->as<node::Decl>();
         node::NodePtr val = nullptr;
 
         // '='
         if (accept(TokenType::OpAssign))
             val = expect(expression(), "expecting declaration initializer");
+
+        // type inference
+        if (val != nullptr || decl->type != nullptr) {
+            std::string deducedType;
+            bool isArray = false;
+            bool isPointer = false;
+            uint32_t arrSz = 0;
+
+            if (val->is(NodeType::String)) {
+                auto str = val->as<node::String>();
+                deducedType = "i8";
+                isPointer = true;
+            } else if (val->is(NodeType::Array)) {
+                auto arr = val->as<node::Array>();
+                arrSz = arr->vals.size();
+                isArray = true;
+                for (auto const &ptr: arr->vals) {
+                    auto ty = DeduceType(ptr);
+                    if (!ty.empty()) {
+                        if (deducedType.empty()) {
+                            deducedType = ty;
+                            continue;
+                        } else if (deducedType == ty) {
+                            continue;
+                        }
+                    }
+                    throw ParseException(this, "Deduced conflicting or invalid types");
+                }
+            } else {
+                deducedType = DeduceType(val);
+            }
+
+            if (!deducedType.empty()) {
+                auto type = std::make_shared<node::Type>(deducedType, 0, lexer->getPosition());
+                type->isArray = isArray;
+                type->arrSize = arrSz;
+
+                if (isPointer) {
+                    type->ptrLevel = 1;
+                }
+
+                decl->type = type;
+            }
+        }
+
+        if (decl->type == nullptr) {
+            throw ParseException(this, "type inference: expecting type or value");
+        }
 
         auto bin = std::make_shared<node::BinaryOp>(TokenType::OpAssign, decl, val, pos);
         vec.emplace_back(bin);
@@ -915,7 +1010,7 @@ node::NodePtr Parser::if_statement() {
 
     // block
     ctx = "if statement";
-    if ((body = block()) == nullptr) {
+    if ((body = block({TokenType::Else})) == nullptr) {
         return nullptr;
     }
 
@@ -997,7 +1092,7 @@ node::NodePtr Parser::repeat_statement() {
 
     ctx = "while statement body";
     // block
-    if ((body = block()) == nullptr) return nullptr;
+    if ((body = block({TokenType::While})) == nullptr) return nullptr;
 
     // ('until' | 'while')
     if (!(lexer->isType(TokenType::Until) || lexer->isType(TokenType::While))) return nullptr;
@@ -1236,7 +1331,7 @@ node::NodePtr Parser::case_statement() {
 
             accept(TokenType::Semicolon);
 
-            auto whenBody = expect(block(), "expected block")->as<node::Block>();
+            auto whenBody = expect(block({TokenType::When, TokenType::Else}), "expected block")->as<node::Block>();
             auto when = std::make_shared<node::When>(whenExprs, whenBody, whenPos);
             whenStmts.push_back(when);
         } else if (lexer->isType(TokenType::Else)) {
@@ -1327,8 +1422,7 @@ node::NodePtr Parser::statement() {
 /*
  * statement* 'end'
  */
-
-node::BlockPtr Parser::block() {
+node::BlockPtr Parser::block(std::vector<TokenType> const &expectedTerminators) {
     debug("block");
     node::NodePtr node;
     auto block = std::make_shared<node::Block>(lexer->getPosition());
@@ -1342,12 +1436,7 @@ node::BlockPtr Parser::block() {
         accept(TokenType::Semicolon);
 
         block->stmts.emplace_back(node);
-    } while (!accept(TokenType::End)
-             && !lexer->isType(TokenType::Else)
-             && !lexer->isType(TokenType::While)
-             && !lexer->isType(TokenType::Until)
-             && !lexer->isType(TokenType::When));
-
+    } while (!accept(TokenType::End) && !lexer->isTypeInRange(expectedTerminators));
     return block;
 }
 

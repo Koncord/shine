@@ -97,7 +97,7 @@ void LLVMCodegen::objectFile(const std::string &fname) {
 
 
     std::error_code ec;
-    raw_fd_ostream fileStream(fname, ec, sys::fs::F_None);;
+    raw_fd_ostream fileStream(fname, ec, sys::fs::OpenFlags::OF_None);
     if (ec)
         throw std::runtime_error("Could not open file: " + ec.message());
 
@@ -156,10 +156,10 @@ void LLVMCodegen::optimize() {
     assert(llvmctx != nullptr);
     if (optLevel == 0) return;
     llvm::PassBuilder passBuilder;
-    llvm::LoopAnalysisManager loopAnalysisManager(true); // true is just to output debug info
-    llvm::FunctionAnalysisManager functionAnalysisManager(true);
-    llvm::CGSCCAnalysisManager cGSCCAnalysisManager(true);
-    llvm::ModuleAnalysisManager moduleAnalysisManager(true);
+    llvm::LoopAnalysisManager loopAnalysisManager;
+    llvm::FunctionAnalysisManager functionAnalysisManager;
+    llvm::CGSCCAnalysisManager cGSCCAnalysisManager;
+    llvm::ModuleAnalysisManager moduleAnalysisManager;
 
     passBuilder.registerModuleAnalyses(moduleAnalysisManager);
     passBuilder.registerCGSCCAnalyses(cGSCCAnalysisManager);

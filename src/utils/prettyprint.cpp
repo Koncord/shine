@@ -77,7 +77,7 @@ namespace {
                 print_func("  ");
         }
 
-        void visit(const node::BlockPtr &node) override {
+        void visit(const node::BlockPtr &node, const node::NodePtr &invoker) override {
             print_func("\n");
             for (const auto &stmt : node->stmts) {
                 indent();
@@ -86,27 +86,27 @@ namespace {
             }
         }
 
-        void visit(const node::IdPtr &node) override {
+        void visit(const node::IdPtr &node, const node::NodePtr &invoker) override {
             print_func("(id %s)", node->val.c_str());
         }
 
-        void visit(const node::IntPtr &node) override {
+        void visit(const node::IntPtr &node, const node::NodePtr &invoker) override {
             print_func("(int %d)", node->val);
         }
 
-        void visit(const node::FloatPtr &node) override {
+        void visit(const node::FloatPtr &node, const node::NodePtr &invoker) override {
             print_func("(float %f)", node->val);
         }
 
-        void visit(const node::StringPtr &node) override {
+        void visit(const node::StringPtr &node, const node::NodePtr &invoker) override {
             print_func("(string '%s')", inspect(node->val).c_str());
         }
 
-        void visit(const node::BooleanPtr &node) override {
+        void visit(const node::BooleanPtr &node, const node::NodePtr &invoker) override {
             print_func("(boolean '%s')", node->val ? "true" : "false");
         }
 
-        void visit(const node::SlotPtr &node) override {
+        void visit(const node::SlotPtr &node, const node::NodePtr &invoker) override {
             print_func("(slot\n");
             ++indents;
             indent();
@@ -118,7 +118,7 @@ namespace {
             print_func(")");
         }
 
-        void visit(const node::CallPtr &node) override {
+        void visit(const node::CallPtr &node, const node::NodePtr &invoker) override {
             print_func("(call\n");
             ++indents;
             indent();
@@ -140,7 +140,7 @@ namespace {
             print_func(")");
         }
 
-        void visit(const node::WhilePtr &node) override {
+        void visit(const node::WhilePtr &node, const node::NodePtr &invoker) override {
             // while | until
             print_func("(%s ", node->negate ? "until" : "while");
             node->expr->accept(*this);
@@ -151,7 +151,7 @@ namespace {
             print_func(")\n");
         }
 
-        void visit(const node::RepeatPtr &node) override {
+        void visit(const node::RepeatPtr &node, const node::NodePtr &invoker) override {
             print_func("(repeat");
             ++indents;
             node->block->accept(*this);
@@ -162,7 +162,7 @@ namespace {
             print_func(")\n");
         }
 
-        void visit(const node::ForPtr &node) override {
+        void visit(const node::ForPtr &node, const node::NodePtr &invoker) override {
             print_func("(for ");
             node->start->accept(*this);
             print_func(", ");
@@ -175,7 +175,7 @@ namespace {
             print_func(")\n");
         }
 
-        void visit(const node::UnaryOpPtr &node) override {
+        void visit(const node::UnaryOpPtr &node, const node::NodePtr &invoker) override {
             print_func("(");
 
             if (node->postfix) {
@@ -189,7 +189,7 @@ namespace {
             print_func(")");
         }
 
-        void visit(const node::BinaryOpPtr &node) override {
+        void visit(const node::BinaryOpPtr &node, const node::NodePtr &invoker) override {
             if (node->let)
                 print_func("(let %s ", TokenHelper::getTokenTypeString(node->op));
             else
@@ -200,15 +200,31 @@ namespace {
             print_func(")");
         }
 
-        void visit(const node::FunctionPtr &node) override {
-            node->as<node::Proto>()->accept(*this);
+        void visit(const node::FunctionPtr &node, const node::NodePtr &invoker) override {
+            std::string ns;
+            for (const auto &n : node->_namespace)
+                ns += n + "::";
+            print_func("(%sfunction %s%s -> ", node->isPublic ? "public " : "", ns.c_str(), node->name.c_str());
+            ++indents;
+
+            if (node->type)
+                node->type->accept(*this);
+
+            for (const auto &param : node->params) {
+                print_func("\n");
+                indent();
+                param->accept(*this);
+            }
+
+            --indents;
+            //print_func("\n");
             ++indents;
             node->block->accept(*this);
             --indents;
             print_func(")");
         }
 
-        void visit(node::ProtoPtr const &node) override {
+        void visit(node::ProtoPtr const &node, const node::NodePtr &invoker) override {
             std::string ns;
             for (const auto &n : node->_namespace)
                 ns += n + "::";
@@ -229,7 +245,7 @@ namespace {
             print_func(")");
         }
 
-        void visit(const node::ArrayPtr &node) override {
+        void visit(const node::ArrayPtr &node, const node::NodePtr &invoker) override {
             print_func("(array\n");
             ++indents;
             for (auto it = node->vals.begin(); it != node->vals.end(); ++it) {
@@ -241,7 +257,7 @@ namespace {
             print_func(")");
         }
 
-        void visit(const node::HashPtr &node) override {
+        void visit(const node::HashPtr &node, const node::NodePtr &invoker) override {
             print_func("(hash\n");
             ++indents;
             for (const auto &val : node->pairs) {
@@ -256,7 +272,7 @@ namespace {
             print_func(")");
         }
 
-        void visit(const node::ReturnPtr &node) override {
+        void visit(const node::ReturnPtr &node, const node::NodePtr &invoker) override {
             print_func("(return");
             if (node->expr) {
                 ++indents;
@@ -268,7 +284,7 @@ namespace {
             print_func(")");
         }
 
-        void visit(const node::DeclPtr &node) override {
+        void visit(const node::DeclPtr &node, const node::NodePtr &invoker) override {
             print_func("(decl");
             ++indents;
             for (const auto &val : node->vec) {
@@ -288,7 +304,7 @@ namespace {
             --indents;
         }
 
-        void visit(const node::IfPtr &node) override {
+        void visit(const node::IfPtr &node, const node::NodePtr &invoker) override {
             // if
             print_func("(%s ", node->negate ? "unless" : "if");
             node->expr->accept(*this);
@@ -324,7 +340,7 @@ namespace {
             }
         }
 
-        void visit(const node::CasePtr &node) override {
+        void visit(const node::CasePtr &node, const node::NodePtr &invoker) override {
             print_func("(case ");
             node->expr->accept(*this);
             ++indents;
@@ -354,7 +370,7 @@ namespace {
             print_func(")");
         }
 
-        void visit(const node::SubscriptPtr &node) override {
+        void visit(const node::SubscriptPtr &node, const node::NodePtr &invoker) override {
             print_func("(subscript\n");
             ++indents;
             indent();
@@ -366,7 +382,7 @@ namespace {
             print_func(")");
         }
 
-        void visit(const node::TypePtr &node) override {
+        void visit(const node::TypePtr &node, const node::NodePtr &invoker) override {
             print_func("(type ");
 
             for (int i = 0; i < node->ptrLevel; ++i)
@@ -401,7 +417,7 @@ namespace {
             print_func(")");
         }
 
-        void visit(const node::StructPtr &node) override {
+        void visit(const node::StructPtr &node, const node::NodePtr &invoker) override {
             print_func("(type %s", node->name.c_str());
             ++indents;
             for (const auto &field : node->fields) {
@@ -435,24 +451,24 @@ namespace {
             --indents;
         }
 
-        void visit(const node::LetPtr &node) override {
+        void visit(const node::LetPtr &node, const node::NodePtr &invoker) override {
             print_func("(let");
             varVisit(node);
         }
 
-        void visit(const node::ConstPtr &node) override {
+        void visit(const node::ConstPtr &node, const node::NodePtr &invoker) override {
             print_func("(const");
             varVisit(node);
         }
 
-        void visit(const node::UsePtr &node) override {
+        void visit(const node::UsePtr &node, const node::NodePtr &invoker) override {
             print_func("(use \'%s\'", node->module.c_str());
             if (!node->alias.empty())
                 print_func(" as %s", node->alias.c_str());
             print_func(")");
         }
 
-        /*void visit(const node::ExternPtr &node) override {
+        /*void visit(const node::ExternPtr &node, const node::NodePtr &invoker) override {
             std::string ns;
             for (const auto &n : node->_namespace)
                 ns += n + "::";
@@ -473,19 +489,19 @@ namespace {
             print_func(")");
         }*/
 
-        void visit(const node::ContinuePtr &) override {
+        void visit(const node::ContinuePtr &, const node::NodePtr &) override {
             print_func("(continue)");
         }
 
-        void visit(const node::BreakPtr &) override {
+        void visit(const node::BreakPtr &, const node::NodePtr &) override {
             print_func("(break)");
         }
 
-        void visit(const node::VaArgPtr &) override {
+        void visit(const node::VaArgPtr &, const node::NodePtr &) override {
             print_func("(vaarg)");
         }
 
-        void visit(const node::ModulePtr &node) override {
+        void visit(const node::ModulePtr &node, const node::NodePtr &invoker) override {
             print_func("(module %s", node->name.c_str());
             ++indents;
             for (const auto &field : node->funcs) {
@@ -497,7 +513,7 @@ namespace {
             print_func(")");
         }
 
-        void visit(const node::ScopePtr &node) override {
+        void visit(const node::ScopePtr &node, const node::NodePtr &invoker) override {
             print_func("(scoped id ");
 
             for (auto it = node->scope.begin(); it != node->scope.end(); ++it) {
@@ -509,15 +525,15 @@ namespace {
             print_func(")");
         }
 
-        /*void visit(node::ArgsPtr const &node) override {
+        /*void visit(node::ArgsPtr const &node, const node::NodePtr &invoker) override {
             throw shine::UnhandledNode(filename, node);
         }*/
 
-        void visit(node::WhenPtr const &node) override {
+        void visit(node::WhenPtr const &node, const node::NodePtr &invoker) override {
             throw shine::UnhandledNode(filename, node);
         }
 
-        void visit(node::HashPairPtr const &node) override {
+        void visit(node::HashPairPtr const &node, const node::NodePtr &invoker) override {
             throw shine::UnhandledNode(filename, node);
         }
 

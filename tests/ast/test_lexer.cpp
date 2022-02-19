@@ -20,6 +20,13 @@ ident ident2)", "test.cpp");
     REQUIRE(std::get<std::string>(tok.value) == "ident2");
 }
 
+TEST_CASE("Test character", "[lexer]") {
+    shine::Lexer lex(R"('c')", "test.cpp");
+    auto tok = lex.getNextToken();
+    REQUIRE(tok.type == shine::TokenType::Char);
+    auto tokenValue = std::get<int64_t>(tok.value);
+    REQUIRE((char)(tokenValue) == 'c');
+}
 
 TEST_CASE("Test string", "[lexer]") {
     shine::Lexer lex(R"("my string")", "test.cpp");
@@ -32,7 +39,7 @@ TEST_CASE("Test string", "[lexer]") {
 TEST_CASE("Test number", "[lexer]") {
     shine::Lexer lex(R"(12345)", "test.cpp");
     auto tok = lex.getNextToken();
-    REQUIRE(tok.type == shine::TokenType::I64);
+    REQUIRE(tok.type == shine::TokenType::Number);
     auto tokenValue = std::get<int64_t>(tok.value);
     REQUIRE(tokenValue == 12345);
 }
@@ -40,7 +47,7 @@ TEST_CASE("Test number", "[lexer]") {
 TEST_CASE("Test hex number", "[lexer]") {
     shine::Lexer lex(R"(0x12345)", "test.cpp");
     auto tok = lex.getNextToken();
-    REQUIRE(tok.type == shine::TokenType::I64);
+    REQUIRE(tok.type == shine::TokenType::Number);
     auto tokenValue = std::get<int64_t>(tok.value);
     REQUIRE(tokenValue == 0x12345);
 }

@@ -10,18 +10,12 @@ namespace shine {
   t(Illegal, "illegal") \
   t(EOS, "end-of-source") \
   t(Id, "id") \
-  t(I64, "i64") \
-  t(I32, "i32") \
-  t(I16, "i16") \
-  t(I8, "u8") \
-  t(U64, "u64") \
-  t(U32, "u32") \
-  t(U16, "u16") \
-  t(U8, "u8") \
   t(VaArg, "...") \
   t(Float, "float") \
   t(String, "string") \
-  t(Boolean, "boolean") \
+  t(Boolean, "boolean")  \
+  t(Number, "number")    \
+  t(Char, "character")   \
   t(True, "true") \
   t(False, "false") \
   t(Extern, "extern") \

@@ -37,3 +37,81 @@ TEST_CASE("Test extern", "[parser]") {
     REQUIRE(par1->type->tname == "i8");
     REQUIRE(par1->type->ptrLevel == 1);
 }
+
+TEST_CASE("Test prefix increment", "[parser]") {
+    shine::Lexer lexer(R"(printf("test %d", i); ++i;)", "test.cpp");
+
+    shine::Parser parser(&lexer);
+    auto blockNode = parser.parse();
+    auto stmts = blockNode->stmts;
+    auto node = stmts.at(1);
+    REQUIRE(node->is(shine::NodeType::UnaryOp));
+
+    auto incrNode = node->as<shine::node::UnaryOp>();
+
+    REQUIRE(incrNode->op == shine::TokenType::OpIncr);
+    REQUIRE(incrNode->postfix == false);
+    REQUIRE(incrNode->expr->as<shine::node::Id>()->val == "i");
+}
+
+TEST_CASE("Test postfix increment", "[parser]") {
+    shine::Lexer lexer(R"(printf("test %d", i); i++;)", "test.cpp");
+
+    shine::Parser parser(&lexer);
+    auto blockNode = parser.parse();
+    auto stmts = blockNode->stmts;
+    auto node = stmts.at(1);
+    REQUIRE(node->is(shine::NodeType::UnaryOp));
+
+    auto incrNode = node->as<shine::node::UnaryOp>();
+
+    REQUIRE(incrNode->op == shine::TokenType::OpIncr);
+    REQUIRE(incrNode->postfix == true);
+    REQUIRE(incrNode->expr->as<shine::node::Id>()->val == "i");
+}
+
+TEST_CASE("Test prefix decrement", "[parser]") {
+    shine::Lexer lexer(R"(printf("test %d", i); --i;)", "test.cpp");
+
+    shine::Parser parser(&lexer);
+    auto blockNode = parser.parse();
+    auto stmts = blockNode->stmts;
+    auto node = stmts.at(1);
+    REQUIRE(node->is(shine::NodeType::UnaryOp));
+
+    auto incrNode = node->as<shine::node::UnaryOp>();
+
+    REQUIRE(incrNode->op == shine::TokenType::OpDecr);
+    REQUIRE(incrNode->postfix == false);
+    REQUIRE(incrNode->expr->as<shine::node::Id>()->val == "i");
+}
+
+TEST_CASE("Test postfix decrement", "[parser]") {
+    shine::Lexer lexer(R"(printf("test %d", i); i--;)", "test.cpp");
+
+    shine::Parser parser(&lexer);
+    auto blockNode = parser.parse();
+    auto stmts = blockNode->stmts;
+    auto node = stmts.at(1);
+    REQUIRE(node->is(shine::NodeType::UnaryOp));
+
+    auto incrNode = node->as<shine::node::UnaryOp>();
+
+    REQUIRE(incrNode->op == shine::TokenType::OpDecr);
+    REQUIRE(incrNode->postfix == true);
+    REQUIRE(incrNode->expr->as<shine::node::Id>()->val == "i");
+}
+
+TEST_CASE("call_expression with '--' requires line check", "[parser bugs]") {
+    shine::Lexer lexer(R"(
+        call()
+        --i;
+)", "test.cpp");
+
+    shine::Parser parser(&lexer);
+    auto blockNode = parser.parse();
+    auto stmts = blockNode->stmts;
+    auto node = stmts.at(0);
+    REQUIRE_FALSE(node->is(shine::NodeType::UnaryOp));
+}
+

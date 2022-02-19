@@ -1,14 +1,17 @@
 #pragma once
 
 #include <memory>
+#include <utility>
 #include <ast/visitor.hpp>
 #include <types.hpp>
 #include <llvm-codegen/codegen.hpp>
 #include <llvm/IR/IRBuilder.h>
 #include <stack>
 #include <utils/stack.hpp>
+#include "typeInfo.hpp"
 
 namespace shine {
+#define SHINE_UNUSED(arg) (void)(arg);
     struct LLVMCtx {
         std::unique_ptr<llvm::LLVMContext> ctx;
         std::unique_ptr<llvm::Module> module;
@@ -23,7 +26,7 @@ namespace shine {
 
         LLVMValue(llvm::Value *value, bool sign, bool constant) : value(value), sign(sign), constant(constant) {}
 
-        LLVMValue(llvm::Type *type) : type(type), isType(true) {}
+        LLVMValue(llvm::Type *type, TypeInfo typeInfo) : type(type), isType(true), typeInfo(std::move(typeInfo)) {}
 
         union {
             llvm::Type *type;
@@ -33,6 +36,7 @@ namespace shine {
         bool isType = false;
         bool sign = false;
         bool constant = false;
+        TypeInfo typeInfo;
 
         inline bool isGlobal() { return llvm::isa<llvm::GlobalValue>(value); };
         //inline bool isConstant() { return llvm::isa<llvm::Constant>(value); };
@@ -105,7 +109,8 @@ namespace shine {
         std::string getName(const node::NodePtr &node);
 
         LLVMValue popValue();
-        void pushValue(LLVMValue value);
+        void pushValue(LLVMValue const &llvmValue);
+        void pushValue(llvm::Type *type, TypeInfo typeInfo);
 
         static bool isIntegerType(std::string ref, int &bitwidth, bool *isSigned = nullptr);
 
@@ -136,42 +141,42 @@ namespace shine {
         static bool isBlockContainsJumpCond(const node::BlockPtr &block);
     public:
 
-        void visit(const node::BlockPtr &node) override;
-        void visit(const node::IdPtr &node) override;
-        void visit(const node::IntPtr &node) override;
-        void visit(const node::FloatPtr &node) override;
-        void visit(const node::StringPtr &node) override;
-        void visit(const node::BooleanPtr &node) override;
-        void visit(const node::SlotPtr &node) override;
-        void visit(const node::CallPtr &node) override;
-        void visit(const node::UnaryOpPtr &node) override;
-        void visit(const node::BinaryOpPtr &node) override;
-        void visit(const node::FunctionPtr &node) override;
-        void visit(const node::ArrayPtr &node) override;
-        void visit(const node::HashPtr &node) override;
-        void visit(const node::ReturnPtr &node) override;
-        void visit(const node::DeclPtr &node) override;
-        void visit(const node::WhilePtr &node) override;
-        void visit(const node::RepeatPtr &node) override;
-        void visit(const node::ForPtr &node) override;
-        void visit(const node::IfPtr &node) override;
-        void visit(const node::SubscriptPtr &node) override;
-        void visit(const node::TypePtr &node) override;
-        void visit(const node::LetPtr &node) override;
-        void visit(const node::ConstPtr &node) override;
-        void visit(const node::UsePtr &node) override;
-        //void visit(const node::ExternPtr &node) override;
-        void visit(const node::ContinuePtr &node) override;
-        void visit(const node::BreakPtr &node) override;
-        void visit(const node::StructPtr &node) override;
-        void visit(const node::VaArgPtr &node) override;
-        void visit(const node::CasePtr &node) override;
-        void visit(const node::ModulePtr &node) override;
-        void visit(const node::ScopePtr &node) override;
-        //void visit(node::ArgsPtr const &node) override;
-        void visit(node::ProtoPtr const &node) override;
-        void visit(node::WhenPtr const &node) override;
-        void visit(node::HashPairPtr const &node) override;
+        void visit(const node::BlockPtr &node, const node::NodePtr &invoker) override;
+        void visit(const node::IdPtr &node, const node::NodePtr &invoker) override;
+        void visit(const node::IntPtr &node, const node::NodePtr &invoker) override;
+        void visit(const node::FloatPtr &node, const node::NodePtr &invoker) override;
+        void visit(const node::StringPtr &node, const node::NodePtr &invoker) override;
+        void visit(const node::BooleanPtr &node, const node::NodePtr &invoker) override;
+        void visit(const node::SlotPtr &node, const node::NodePtr &invoker) override;
+        void visit(const node::CallPtr &node, const node::NodePtr &invoker) override;
+        void visit(const node::UnaryOpPtr &node, const node::NodePtr &invoker) override;
+        void visit(const node::BinaryOpPtr &node, const node::NodePtr &invoker) override;
+        void visit(const node::FunctionPtr &node, const node::NodePtr &invoker) override;
+        void visit(const node::ArrayPtr &node, const node::NodePtr &invoker) override;
+        void visit(const node::HashPtr &node, const node::NodePtr &invoker) override;
+        void visit(const node::ReturnPtr &node, const node::NodePtr &invoker) override;
+        void visit(const node::DeclPtr &node, const node::NodePtr &invoker) override;
+        void visit(const node::WhilePtr &node, const node::NodePtr &invoker) override;
+        void visit(const node::RepeatPtr &node, const node::NodePtr &invoker) override;
+        void visit(const node::ForPtr &node, const node::NodePtr &invoker) override;
+        void visit(const node::IfPtr &node, const node::NodePtr &invoker) override;
+        void visit(const node::SubscriptPtr &node, const node::NodePtr &invoker) override;
+        void visit(const node::TypePtr &node, const node::NodePtr &invoker) override;
+        void visit(const node::LetPtr &node, const node::NodePtr &invoker) override;
+        void visit(const node::ConstPtr &node, const node::NodePtr &invoker) override;
+        void visit(const node::UsePtr &node, const node::NodePtr &invoker) override;
+        //void visit(const node::ExternPtr &node, const node::NodePtr &invoker) override;
+        void visit(const node::ContinuePtr &node, const node::NodePtr &invoker) override;
+        void visit(const node::BreakPtr &node, const node::NodePtr &invoker) override;
+        void visit(const node::StructPtr &node, const node::NodePtr &invoker) override;
+        void visit(const node::VaArgPtr &node, const node::NodePtr &invoker) override;
+        void visit(const node::CasePtr &node, const node::NodePtr &invoker) override;
+        void visit(const node::ModulePtr &node, const node::NodePtr &invoker) override;
+        void visit(const node::ScopePtr &node, const node::NodePtr &invoker) override;
+        //void visit(node::ArgsPtr const &node, const node::NodePtr &invoker) override;
+        void visit(node::ProtoPtr const &node, const node::NodePtr &invoker) override;
+        void visit(node::WhenPtr const &node, const node::NodePtr &invoker) override;
+        void visit(node::HashPairPtr const &node, const node::NodePtr &invoker) override;
     };
 }
 

@@ -12,10 +12,7 @@
 // True if the lexer should insert a semicolon after `t`.
 constexpr bool need_semi(shine::TokenType t) {
     return t == shine::TokenType::Id || t == shine::TokenType::Float
-           || t == shine::TokenType::I64 || t == shine::TokenType::I32
-           || t == shine::TokenType::I16 || t == shine::TokenType::I8
-           || t == shine::TokenType::U64 || t == shine::TokenType::U32
-           || t == shine::TokenType::U16 || t == shine::TokenType::U8
+           || t == shine::TokenType::Number || t == shine::TokenType::Char
            || t == shine::TokenType::Boolean
            || t == shine::TokenType::String || t == shine::TokenType::Return;
 }
@@ -168,7 +165,7 @@ namespace shine {
          * 1 -> '+'(default)
          * 0 -> '-'
          */
-        token(I64);
+        token(Number);
 
         if (c == '0')
             goto scan_hex;
@@ -404,7 +401,7 @@ namespace shine {
             case '\'': {
                 tok.value = (int64_t) scan_char(next());
                 next();
-                return token(I64);
+                return token(Char);
             }
             case 0:
                 return token(EOS);

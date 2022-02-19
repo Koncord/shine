@@ -50,7 +50,7 @@ namespace shine {
 
         node::NodePtr pub_modifier();
 
-        node::BlockPtr block();
+        node::BlockPtr block(std::vector<TokenType> const &expectedTerminators = {});
 
         bool arg_list(std::vector<node::NodePtr> &vals, TokenType delim);
         node::ArgsPtr call_args();

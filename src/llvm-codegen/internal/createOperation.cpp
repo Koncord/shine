@@ -177,12 +177,13 @@ namespace shine {
                 else
                     result = builder->CreateICmp(sign ? CmpInst::ICMP_SLE : CmpInst::ICMP_ULE, lval, rval);
                 break;
-            case TokenType::OpEq:
+            case TokenType::OpEq: {
                 if (isFpOp)
                     result = builder->CreateFCmp(CmpInst::FCMP_OEQ, lval, rval);
                 else
                     result = builder->CreateICmpEQ(lval, rval);
                 break;
+            }
             case TokenType::OpNEq:
                 if (isFpOp)
                     result = builder->CreateFCmp(CmpInst::FCMP_ONE, lval, rval);
@@ -197,7 +198,7 @@ namespace shine {
             case TokenType::OpPlusAssign:
                 if (constant)
                     goto const_err;
-                break;
+                [[fallthrough]];
             case TokenType::OpPlus:
                 if (isFpOp)
                     result = builder->CreateFAdd(lval, rval);
@@ -207,7 +208,7 @@ namespace shine {
             case TokenType::OpMinusAssign:
                 if (constant)
                     goto const_err;
-                break;
+                [[fallthrough]];
             case TokenType::OpMinus:
                 if (isFpOp)
                     result = builder->CreateFSub(lval, rval);

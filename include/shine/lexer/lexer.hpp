@@ -3,6 +3,7 @@
 #include "token.hpp"
 #include <vector>
 #include <string>
+#include <algorithm>
 #include <utils/position.hpp>
 
 // Lexer struct.
@@ -34,22 +35,27 @@ namespace shine {
         Lexer(std::string const &source, const char *filename) : source(source.begin(), source.end()),
                                                                  filename(filename) {}
 
-        int getLine() const { return lineno; }
+        inline int getLine() const { return lineno; }
 
-        int getLinePosition() const { return linepos; }
+        inline int getLinePosition() const { return linepos; }
 
         Position getPosition() const { return Position{getLine(), getLinePosition()}; }
 
-        Token getToken() const { return tok; }
+        inline Token getToken() const { return tok; }
 
-        bool isType(TokenType t) { return tok.type == t; }
+        inline bool isType(TokenType t) { return tok.type == t; }
+        inline bool isTypeInRange(std::vector<TokenType> const &types) {
+            return std::ranges::any_of(types, [this](auto const &type) {
+                return tok.type == type;
+            });
+        }
 
 
-        bool isEquality() const {
+        inline bool isEquality() const {
             return shine::isEquality(tok.type);
         }
 
-        bool isRelational() const {
+        inline bool isRelational() const {
             return shine::isRelational(tok.type);
         }
 

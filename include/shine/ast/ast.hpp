@@ -13,6 +13,15 @@
 
 namespace shine {
     namespace node {
+#define SHINE_NODE_ACCEPT(Type, Spec)                               \
+    void accept(Visitor &visitor, NodePtr invoker = nullptr) Spec { \
+        visitor.visit(this->as<Type>(), invoker);                   \
+    }
+
+#define SHINE_NODE_ACCEPT_FINAL(Type) SHINE_NODE_ACCEPT(Type, final)
+#define SHINE_NODE_ACCEPT_OVERRIDE(Type) SHINE_NODE_ACCEPT(Type, override)
+#define SHINE_NODE_ACCEPT_ERR(Type) void accept(Visitor &, NodePtr) final { throw AstException(this->as<Type>()); }
+
         struct Node : public std::enable_shared_from_this<Node> {
             Node() = default;
 
@@ -32,19 +41,20 @@ namespace shine {
 
             std::string getNodeName() { return nodetype_names[(int) (nodeType)]; }
             
-            virtual void accept(Visitor& visitor) = 0;
+            virtual void accept(Visitor& visitor, NodePtr invoker = nullptr) = 0;
         };
 
         struct Block : Node {
             Block(Position pos) : Node(NodeType::Block, pos) {}
-            void accept(Visitor &visitor) final { visitor.visit(this->as<Block>()); }
+            SHINE_NODE_ACCEPT_FINAL(Block)
 
             std::vector<NodePtr> stmts;
         };
 
         struct Args : Node {
             Args(Position pos) : Node(NodeType::Args, pos) {}
-            void accept(Visitor &) final { throw AstException(this->as<Args>()); }
+
+            SHINE_NODE_ACCEPT_ERR(Args)
 
             std::vector<NodePtr> vec;
             std::unordered_map<std::string, NodePtr> hash;
@@ -59,7 +69,7 @@ namespace shine {
                 left(std::move(left)),
                 right(std::move(right)) {}
 
-            void accept(Visitor &visitor) final { visitor.visit(this->as<Subscript>()); }
+            SHINE_NODE_ACCEPT_FINAL(Subscript)
 
             NodePtr left;
             NodePtr right;
@@ -70,7 +80,7 @@ namespace shine {
                     : Node(NodeType::Scope, pos),
                       scope(std::move(scope)) {}
 
-            void accept(Visitor &visitor) final { visitor.visit(this->as<Scope>()); }
+            SHINE_NODE_ACCEPT_FINAL(Scope)
 
             std::vector<std::string> scope;
         };
@@ -81,7 +91,7 @@ namespace shine {
                       left(std::move(left)),
                       right(std::move(right)) {}
 
-            void accept(Visitor &visitor) final { visitor.visit(this->as<Slot>()); }
+            SHINE_NODE_ACCEPT_FINAL(Slot)
 
             NodePtr left;
             NodePtr right;
@@ -94,7 +104,7 @@ namespace shine {
                       expr(std::move(expr)),
                       postfix(postfix) {}
 
-            void accept(Visitor &visitor) final { visitor.visit(this->as<UnaryOp>()); }
+            SHINE_NODE_ACCEPT_FINAL(UnaryOp)
 
             TokenType op;
             NodePtr expr;
@@ -106,7 +116,7 @@ namespace shine {
                     : Node(NodeType::BinaryOp, pos), op(op), left(std::move(left)), right(std::move(right)),
                       let(0) {}
 
-            void accept(Visitor &visitor) final { visitor.visit(this->as<BinaryOp>()); }
+            SHINE_NODE_ACCEPT_FINAL(BinaryOp)
 
             TokenType op;
             NodePtr left;
@@ -118,7 +128,7 @@ namespace shine {
         struct T_Node : Node {
             T_Node(Type val, NodeType type, Position pos) : Node(type, pos), val(std::move(val)) {}
 
-            // void accept(Visitor &visitor) final { visitor.visit(this->as<T_Node>()); }
+            // SHINE_NODE_ACCEPT_FINAL(T_Node)
 
             Type val;
         };
@@ -127,7 +137,7 @@ namespace shine {
         struct Int : T_Node<int64_t> {
             Int(int val, int8_t size, Position pos) : T_Node(val, NodeType::Int, pos), size(size) {}
 
-            void accept(Visitor &visitor) final { visitor.visit(this->as<Int>()); }
+            SHINE_NODE_ACCEPT_FINAL(Int)
 
             int8_t size;
         };
@@ -135,26 +145,26 @@ namespace shine {
         struct Float : T_Node<float> {
             Float(float val, Position pos) : T_Node(val, NodeType::Float, pos) {}
 
-            void accept(Visitor &visitor) final { visitor.visit(this->as<Float>()); }
+            SHINE_NODE_ACCEPT_FINAL(Float)
         };
 
 
         struct String : T_Node<std::string> {
             String(std::string val, Position pos) : T_Node(std::move(val), NodeType::String, pos) {}
 
-            void accept(Visitor &visitor) final { visitor.visit(this->as<String>()); }
+            SHINE_NODE_ACCEPT_FINAL(String)
         };
 
         struct Boolean : T_Node<bool> {
             Boolean(bool val, Position pos) : T_Node(val, NodeType::Boolean, pos) {}
 
-            void accept(Visitor &visitor) final { visitor.visit(this->as<Boolean>()); }
+            SHINE_NODE_ACCEPT_FINAL(Boolean)
         };
 
         struct Id : T_Node<std::string> {
             Id(std::string val, Position pos) : T_Node(std::move(val), NodeType::Id, pos) {}
 
-            void accept(Visitor &visitor) final { visitor.visit(this->as<Id>()); }
+            SHINE_NODE_ACCEPT_FINAL(Id)
         };
 
         struct Type : Node {
@@ -165,7 +175,7 @@ namespace shine {
                                                                   isArray(false),
                                                                   isFunc(false) {}
 
-            void accept(Visitor &visitor) final { visitor.visit(this->as<Type>()); }
+            SHINE_NODE_ACCEPT_FINAL(Type)
 
             std::string tname;
             int ptrLevel;
@@ -178,7 +188,7 @@ namespace shine {
         struct VaArg : Node {
             VaArg(Position pos) : Node(NodeType::VaArg, pos) {};
 
-            void accept(Visitor &visitor) final { visitor.visit(this->as<VaArg>()); }
+            SHINE_NODE_ACCEPT_FINAL(VaArg)
         };
 
         struct Decl : Node {
@@ -187,7 +197,7 @@ namespace shine {
                       vec(std::move(vec)),
                       type(std::move(type)) {}
 
-            void accept(Visitor &visitor) final { visitor.visit(this->as<Decl>()); }
+            SHINE_NODE_ACCEPT_FINAL(Decl)
 
             std::vector<IdPtr> vec;
             TypePtr type;
@@ -206,13 +216,13 @@ namespace shine {
         struct Let : Variable {
             Let(std::vector<BinaryOpPtr> vec, Position pos) : Variable(std::move(vec), NodeType::Let, pos) {}
 
-            void accept(Visitor &visitor) final { visitor.visit(this->as<Let>()); }
+            SHINE_NODE_ACCEPT_FINAL(Let)
         };
 
         struct Const : Variable {
             Const(std::vector<BinaryOpPtr> vec, Position pos) : Variable(std::move(vec), NodeType::Const, pos) {}
 
-            void accept(Visitor &visitor) final { visitor.visit(this->as<Const>()); }
+            SHINE_NODE_ACCEPT_FINAL(Const)
         };
 
         struct Array : Node {
@@ -220,7 +230,7 @@ namespace shine {
 
             Array(Position pos, std::vector<NodePtr> vals) : Node(NodeType::Array, pos), vals(std::move(vals)) {}
 
-            void accept(Visitor &visitor) final { visitor.visit(this->as<Array>()); }
+            SHINE_NODE_ACCEPT_FINAL(Array)
 
             std::vector<NodePtr> vals;
         };
@@ -228,7 +238,7 @@ namespace shine {
         struct HashPair : Node {
             HashPair(Position pos) : Node(NodeType::HashPair, pos), key(nullptr), val(nullptr) {}
 
-            void accept(Visitor &visitor) final { visitor.visit(this->as<HashPair>()); }
+            SHINE_NODE_ACCEPT_FINAL(HashPair)
 
             NodePtr key;
             NodePtr val;
@@ -237,7 +247,7 @@ namespace shine {
         struct Hash : Node {
             Hash(Position pos) : Node(NodeType::Hash, pos) {}
 
-            void accept(Visitor &visitor) final { visitor.visit(this->as<Hash>()); }
+            SHINE_NODE_ACCEPT_FINAL(Hash)
 
             std::vector<HashPairPtr> pairs;
         };
@@ -249,7 +259,7 @@ namespace shine {
                 args = std::make_shared<Args>(pos);
             }
 
-            void accept(Visitor &visitor) final { visitor.visit(this->as<Call>()); }
+            SHINE_NODE_ACCEPT_FINAL(Call)
 
             NodePtr expr;
             ArgsPtr args;
@@ -260,7 +270,7 @@ namespace shine {
                     : Node(NodeType::Return, pos),
                       expr(std::move(expr)) {}
 
-            void accept(Visitor &visitor) final { visitor.visit(this->as<Return>()); }
+            SHINE_NODE_ACCEPT_FINAL(Return)
 
             NodePtr expr;
         };
@@ -281,7 +291,7 @@ namespace shine {
                 type(std::move(type)),
                 params(std::move(params)) {}
 
-            void accept(Visitor &visitor) override { visitor.visit(this->as<Proto>()); }
+            SHINE_NODE_ACCEPT_OVERRIDE(Proto)
 
             bool isPublic;
             std::vector<std::string> _namespace;
@@ -310,7 +320,7 @@ namespace shine {
 
             Function(Proto &proto, BlockPtr block) : Proto(proto), block(std::move(block)) {}
 
-            void accept(Visitor &visitor) final { visitor.visit(this->as<Function>()); }
+            SHINE_NODE_ACCEPT_FINAL(Function)
 
             BlockPtr block;
         };
@@ -331,13 +341,13 @@ namespace shine {
                       std::move(params),
                       pos) {}
 
-            void accept(Visitor &visitor) final { visitor.visit(this->as<Extern>()); }
+            SHINE_NODE_ACCEPT_FINAL(Extern)
         };*/
 
         struct Struct : Node {
             Struct(std::string name, Position pos) : Node(NodeType::Struct, pos), name(std::move(name)) {}
 
-            void accept(Visitor &visitor) final { visitor.visit(this->as<Struct>()); }
+            SHINE_NODE_ACCEPT_FINAL(Struct)
 
             std::string name;
             std::vector<DeclPtr> fields;
@@ -348,7 +358,7 @@ namespace shine {
                                                                                  name(std::move(name)),
                                                                                  funcs(std::move(funcs)) {}
 
-            void accept(Visitor &visitor) final { visitor.visit(this->as<Module>()); }
+            SHINE_NODE_ACCEPT_FINAL(Module)
 
             std::string name;
             std::vector<NodePtr> funcs;
@@ -362,7 +372,7 @@ namespace shine {
                       block(std::move(block)),
                       elseBlock(nullptr) {}
 
-            void accept(Visitor &visitor) final { visitor.visit(this->as<If>()); }
+            SHINE_NODE_ACCEPT_FINAL(If)
 
             int negate;
             NodePtr expr;
@@ -378,7 +388,7 @@ namespace shine {
                       expr(std::move(expr)),
                       block(std::move(block)) {}
 
-            void accept(Visitor &visitor) override { visitor.visit(this->as<While>()); }
+            SHINE_NODE_ACCEPT_OVERRIDE(While)
 
             int negate;
             NodePtr expr;
@@ -389,7 +399,7 @@ namespace shine {
             Repeat(int negate, NodePtr expr, BlockPtr block, Position pos)
                     : While(negate, std::move(expr), std::move(block), pos) { nodeType = NodeType::Repeat; }
 
-            void accept(Visitor &visitor) final { visitor.visit(this->as<Repeat>()); }
+            SHINE_NODE_ACCEPT_FINAL(Repeat)
         };
 
         struct For : Node {
@@ -400,7 +410,7 @@ namespace shine {
                       step(std::move(step)),
                       block(std::move(block)) {}
 
-            void accept(Visitor &visitor) final { visitor.visit(this->as<For>()); }
+            SHINE_NODE_ACCEPT_FINAL(For)
 
             NodePtr start;
             NodePtr cond;
@@ -411,19 +421,19 @@ namespace shine {
         struct Continue : Node {
             Continue(Position pos) : Node(NodeType::Continue, pos) {}
 
-            void accept(Visitor &visitor) final { visitor.visit(this->as<Continue>()); }
+            SHINE_NODE_ACCEPT_FINAL(Continue)
         };
 
         struct Break : Node {
             Break(Position pos) : Node(NodeType::Break, pos) {}
 
-            void accept(Visitor &visitor) final { visitor.visit(this->as<Break>()); }
+            SHINE_NODE_ACCEPT_FINAL(Break)
         };
 
         struct Use : Node {
             Use(Position pos) : Node(NodeType::Use, pos) {}
 
-            void accept(Visitor &visitor) final { visitor.visit(this->as<Use>()); }
+            SHINE_NODE_ACCEPT_FINAL(Use)
 
             std::string module;
             std::string alias;
@@ -438,7 +448,7 @@ namespace shine {
 
             Case(Position pos) : Node(NodeType::Case, pos) {}
 
-            void accept(Visitor &visitor) final { visitor.visit(this->as<Case>()); }
+            SHINE_NODE_ACCEPT_FINAL(Case)
 
             NodePtr expr;
             BlockPtr elseBlock;
@@ -450,7 +460,7 @@ namespace shine {
                                                                              exprs(std::move(exprs)),
                                                                              block(std::move(block)) {}
 
-            void accept(Visitor &visitor) final { visitor.visit(this->as<When>()); }
+            SHINE_NODE_ACCEPT_FINAL(When)
 
             std::vector<NodePtr> exprs;
             BlockPtr block;
