@@ -17,6 +17,7 @@ statement = selection_statement
           | declaration_statement
           | function_statement
           | struct_statement
+          | mod_statement
           | use_statement
           | expression ;
 
@@ -45,9 +46,13 @@ declaration = identifier parameter_list [":" type_expression] ;
 
 declaration_statement = "extern" declaration ";" ;
 
-function_statement = "def" declaration block ;
+proto_statement = "def" [ identifier "::" ] declaration ;
 
-struct_statement = "struct" {declaration_expression} "end" ;
+function_statement = proto_statement block ;
+
+struct_statement = "struct" identifier {declaration_expression} "end" ;
+
+mod_statement = "mod" identifier  {pub_expression} "end" ;
 
 use_statement = "use" string ['as' id] ;
 
@@ -72,7 +77,7 @@ logical_and_expression = bitswise_or_expression { "&&" bitswise_or_expression } 
 
 bitswise_or_expression = bitswise_xor_expression { "|" bitswise_xor_expression } ;
 bitswise_xor_expression = bitwise_and_expression { "^" bitwise_and_expression } ;
-bitwise_and_expression = equality_expression { "&" equality_exprssion } ;
+bitwise_and_expression = equality_expression { "&" equality_expression } ;
 
 equality_expression = relational_expression { ( "==" | "!=" ) relational_expression } ;
 relational_expression = shift_expression  { ( "<" | "<=" | ">" | ">=" ) shift_expression } ;
@@ -122,6 +127,8 @@ let_expression = "let" declaration ";" ;
 const_expression = "const" declaration ";" ;
 
 declaration_expression = identifier {"id", identifier} ":" type_expression ;
+
+pub_expression = "pub" proto_statement | function_statement ;
 
 
 array_arg_list = expression [ "," ]
