@@ -46,9 +46,9 @@ declaration = identifier parameter_list [":" type_expression] ;
 
 declaration_statement = "extern" declaration ";" ;
 
-proto_statement = "def" [ identifier "::" ] declaration ;
+proto_statement = "extern" [ identifier "::" ] declaration ;
 
-function_statement = proto_statement block ;
+function_statement = "def" [ identifier "::" ] declaration block ;
 
 struct_statement = "struct" identifier {declaration_expression} "end" ;
 
